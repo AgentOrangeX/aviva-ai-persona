@@ -119,12 +119,54 @@ Covers the full access model: anonymous scoring, the save gate, registration val
 
 ---
 
-## Deployment notes
+## Deploying to Railway
 
-- Set a strong `JWT_SECRET` (32+ chars) and `NODE_ENV=production`. The server refuses to start in production with a weak secret.
-- Set `CLIENT_ORIGIN` to your deployed frontend origin(s), comma-separated.
-- `better-sqlite3` ships prebuilt binaries and works on most hosts (including Railway). If a host can't load it, the app automatically falls back to Node's built-in `node:sqlite` (Node ≥ 22.5) — no config needed.
-- SQLite is great for a single-instance internal tool. For multi-instance scale, swap the `db` layer for Postgres; routes use a small `prepare/get/all/run` surface that's straightforward to port.
+This is a monorepo with two apps, so you create **two Railway services from the same GitHub repo**, each pointed at a different root directory.
+
+### Service A — API (root directory: `server`)
+
+1. New Project → Deploy from GitHub repo → select your repo.
+2. Settings → **Root Directory** = `server`.
+3. Add a **persistent volume** (Service → Variables/Volumes → New Volume), mount path `/data`. This is essential — without it the SQLite database is wiped on every redeploy.
+4. Set environment variables:
+   | Variable | Value |
+   | --- | --- |
+   | `NODE_ENV` | `production` |
+   | `JWT_SECRET` | a long random string (`openssl rand -hex 32`) |
+   | `JWT_EXPIRES_IN` | `7d` |
+   | `DATABASE_PATH` | `/data/app.db` (matches the volume mount) |
+   | `ADMIN_EMAIL` | your admin login |
+   | `ADMIN_PASSWORD` | a strong password |
+   | `ADMIN_NAME` | e.g. `Aviva Admin` |
+   | `BCRYPT_ROUNDS` | `12` |
+   | `CLIENT_ORIGIN` | *(fill in after Service B has a URL)* |
+5. Deploy. Note the public URL Railway assigns, e.g. `https://aviva-persona-api.up.railway.app`.
+
+The `start` command (`npm start`) and build are picked up automatically from `server/railway.json`.
+
+### Service B — Client (root directory: `client`)
+
+1. In the same project → New Service → same GitHub repo.
+2. Settings → **Root Directory** = `client`.
+3. Set one environment variable:
+   | Variable | Value |
+   | --- | --- |
+   | `VITE_API_URL` | the API's public URL from Service A (no trailing slash, no `/api`) |
+4. Deploy. Railway runs `npm run build` then `npm start` (which serves the built site) — both from `client/railway.json`.
+
+> `VITE_API_URL` is baked in **at build time**, so if you change it you must trigger a fresh deploy.
+
+### Wire them together
+
+Once both have URLs, set the API service's `CLIENT_ORIGIN` to the client's public URL and redeploy the API. That satisfies CORS. Done — visit the client URL and log in with your `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
+To populate demo data on the deployed instance, run `npm run seed` once from the API service's shell (Railway → service → Shell), or just let real users start taking the quiz.
+
+### Notes
+
+- The server refuses to start in production with a weak/missing `JWT_SECRET` — this is intentional.
+- `better-sqlite3` ships prebuilt binaries and works on Railway. If a host can't load it, the app automatically falls back to Node's built-in `node:sqlite` (Node ≥ 22.5) — no config needed.
+- SQLite on a single service with a volume is fine for an internal tool. For multi-instance scale, switch to Railway's managed **Postgres**; the `db` layer uses a small `prepare/get/all/run` surface that's straightforward to port.
 
 ## Roadmap / extension points
 

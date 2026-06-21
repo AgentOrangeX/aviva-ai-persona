@@ -1,5 +1,10 @@
 // Thin fetch wrapper. Token is injected from auth context.
 
+// In development, leave VITE_API_URL unset — Vite proxies /api to the backend.
+// In production (separate frontend/backend hosts), set VITE_API_URL to the
+// backend's public origin, e.g. https://aviva-persona-api.up.railway.app
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 const TOKEN_KEY = 'aviva_token';
 
 export function getToken() {
@@ -16,7 +21,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
     const t = getToken();
     if (t) headers.Authorization = `Bearer ${t}`;
   }
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
