@@ -1,0 +1,20 @@
+{
+  "name": "aviva-ai-persona",
+  "version": "1.0.0",
+  "description": "Discover Your Aviva AI Persona — a gamified assessment that helps colleagues find how they bring AI to life, with a role-gated admin insights dashboard.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "seed": "npm --prefix server run seed",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
