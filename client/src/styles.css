@@ -21,9 +21,10 @@ input,select{font-family:inherit;font-size:1rem}
 .aurora{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
   background:
     radial-gradient(50% 45% at 12% 8%, rgba(23,111,193,.30), transparent 70%),
-    radial-gradient(45% 40% at 90% 12%, rgba(252,202,18,.28), transparent 70%),
-    radial-gradient(55% 50% at 80% 95%, rgba(89,194,71,.26), transparent 70%),
-    radial-gradient(45% 45% at 5% 90%, rgba(23,111,193,.18), transparent 70%);}
+    radial-gradient(45% 40% at 90% 12%, rgba(252,202,18,.30), transparent 70%),
+    radial-gradient(55% 50% at 80% 95%, rgba(23,111,193,.20), transparent 70%),
+    radial-gradient(40% 40% at 5% 90%, rgba(252,202,18,.16), transparent 70%),
+    radial-gradient(30% 28% at 60% 60%, rgba(89,194,71,.10), transparent 70%);}
 .wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:0 20px}
 
 /* top bar */
@@ -50,7 +51,7 @@ input,select{font-family:inherit;font-size:1rem}
 .hero{text-align:center;padding:54px 0 30px}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.74rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);background:rgba(23,111,193,.1);padding:7px 16px;border-radius:999px;margin-bottom:22px}
 .hero h1{font-size:clamp(2.4rem,6vw,4rem);line-height:1.02;letter-spacing:-.03em;font-weight:900;margin-bottom:18px}
-.grad{background:linear-gradient(100deg,var(--blue),var(--green) 55%,var(--yellow-d));-webkit-background-clip:text;background-clip:text;color:transparent}
+.grad{background:linear-gradient(100deg,var(--blue),var(--yellow-d));-webkit-background-clip:text;background-clip:text;color:transparent}
 .lead{font-size:1.18rem;color:var(--ink-soft);max-width:600px;margin:0 auto 30px}
 .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
 .facts{display:flex;gap:30px;justify-content:center;flex-wrap:wrap;margin-top:46px}
@@ -67,14 +68,14 @@ input,select{font-family:inherit;font-size:1rem}
 .quiz-head{padding:24px 0 8px}
 .progress-wrap{display:flex;align-items:center;gap:14px;margin-bottom:6px}
 .progress-track{flex:1;height:12px;border-radius:999px;background:#EAE6DB;overflow:hidden}
-.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--green) 60%,var(--yellow));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--yellow));transition:width .5s cubic-bezier(.2,.8,.2,1)}
 .progress-meta{font-size:.8rem;font-weight:800;color:var(--ink-soft);white-space:nowrap}
 .streak{font-size:.78rem;font-weight:800;color:var(--yellow-d);min-height:1.2em}
 .qcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:34px;margin-bottom:24px}
-.qtag{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green-d);background:rgba(89,194,71,.12);padding:5px 12px;border-radius:999px;margin-bottom:16px}
-.qtag.ins{color:var(--blue);background:rgba(23,111,193,.1)}
+.qtag{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);background:rgba(23,111,193,.1);padding:5px 12px;border-radius:999px;margin-bottom:16px}
+.qtag.ins{color:var(--blue-d);background:rgba(14,78,138,.1)}
 .qtag.lead{color:var(--yellow-d);background:rgba(252,202,18,.16)}
-.qtag.scn{color:#8A4FC4;background:rgba(138,79,196,.12)}
+.qtag.scn{color:var(--yellow-d);background:rgba(252,202,18,.12)}
 .qcard h2{font-size:1.42rem;line-height:1.25;letter-spacing:-.02em;margin-bottom:22px;font-weight:800}
 .opts{display:flex;flex-direction:column;gap:12px}
 .opt{display:flex;align-items:center;gap:14px;text-align:left;width:100%;padding:16px 18px;border-radius:var(--r-sm);border:2px solid var(--line);background:#fff;font-size:1rem;font-weight:600;color:var(--ink);transition:.16s;line-height:1.4}
@@ -173,7 +174,7 @@ input,select{font-family:inherit;font-size:1rem}
 .champ .info b{font-size:.95rem;font-weight:800}
 .champ .info span{font-size:.78rem;color:var(--ink-soft)}
 .champ .score{margin-left:auto;text-align:right}
-.champ .score b{font-size:1.3rem;font-weight:900;color:var(--green-d)}
+.champ .score b{font-size:1.3rem;font-weight:900;color:var(--blue)}
 .champ .score span{font-size:.68rem;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .admin-note{font-size:.8rem;color:var(--ink-soft);background:rgba(23,111,193,.08);border:1px solid rgba(23,111,193,.25);padding:14px 16px;border-radius:var(--r-sm);margin:18px 0}
 

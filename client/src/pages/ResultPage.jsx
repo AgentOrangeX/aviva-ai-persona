@@ -144,7 +144,7 @@ export default function ResultPage() {
         </div>
 
         <div className="panel">
-          <h3><span className="ic" style={{ background: '#59C247' }}>🏆</span> Achievements</h3>
+          <h3><span className="ic" style={{ background: '#E0AE00' }}>🏆</span> Achievements</h3>
           <div className="ach-grid">
             {ALL_ACH.map((key) => {
               const a = ACHIEVEMENTS[key];

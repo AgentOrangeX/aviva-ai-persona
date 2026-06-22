@@ -72,7 +72,7 @@ export function Confetti({ fire }) {
   const [pieces, setPieces] = useState([]);
   useEffect(() => {
     if (!fire) return;
-    const colors = ['#176FC1', '#FCCA12', '#59C247', '#4F97D6', '#E0AE00'];
+    const colors = ['#176FC1', '#FCCA12', '#4F97D6', '#E0AE00', '#176FC1', '#FCCA12', '#59C247'];
     const arr = Array.from({ length: 90 }).map((_, i) => ({
       id: i,
       left: Math.random() * 100,
