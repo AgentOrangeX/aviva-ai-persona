@@ -45,8 +45,9 @@ export default function QuizPage() {
           const { result } = await api.saveResult(payload);
           navigate('/result', { state: { result, saved: true } });
         } else {
-          const { result } = await api.scorePreview(payload);
-          navigate('/result', { state: { result: { ...result, answers: payload }, saved: false } });
+          // Results are gated: send anonymous users to register, carrying their
+          // answers so they're scored and saved the moment they have an account.
+          navigate('/register', { state: { pendingAnswers: payload } });
         }
       } catch (e) {
         setError(e.message);
@@ -72,11 +73,11 @@ export default function QuizPage() {
       if (idx + 1 < total) {
         setTimeout(() => setIdx(idx + 1), 180);
       } else {
-        toast({ emoji: '🎉', title: 'All done!', detail: 'Crunching your persona…' });
+        toast({ emoji: '🎉', title: 'All done!', detail: user ? 'Crunching your persona…' : 'Create an account to reveal your persona' });
         finish(next);
       }
     },
-    [current, answers, idx, total, finish, toast]
+    [current, answers, idx, total, finish, toast, user]
   );
 
   // keyboard 1-4 to select, arrows to navigate

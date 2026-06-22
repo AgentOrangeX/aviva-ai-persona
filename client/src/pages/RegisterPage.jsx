@@ -15,7 +15,8 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const pendingResult = location.state?.pendingResult;
+  // Raw answers carried over from the quiz (anonymous user finished, now registering).
+  const pendingAnswers = location.state?.pendingAnswers;
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -27,18 +28,19 @@ export default function RegisterPage() {
     setBusy(true);
     try {
       await register(form);
-      // if the user came from an anonymous result, persist it now
-      if (pendingResult) {
+      // If they came from the quiz, score + save their answers now and show the result.
+      if (Array.isArray(pendingAnswers) && pendingAnswers.length) {
         try {
-          const payload = pendingResult.answers || null;
-          // we only have the enriched result client-side; re-save requires answers.
-          // If answers aren't present, skip silently — result still viewable.
-          if (Array.isArray(payload)) await api.saveResult(payload);
-        } catch { /* non-fatal */ }
-        navigate('/my-results', { replace: true });
-      } else {
-        navigate('/', { replace: true });
+          const { result } = await api.saveResult(pendingAnswers);
+          navigate('/result', { replace: true, state: { result, saved: true } });
+          return;
+        } catch {
+          // saving failed for some reason — fall through to results history
+          navigate('/my-results', { replace: true });
+          return;
+        }
       }
+      navigate('/', { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -50,7 +52,11 @@ export default function RegisterPage() {
     <div className="wrap">
       <div className="auth-card">
         <h1>Create your account</h1>
-        <p className="sub">Save your persona, track progress, and unlock your learning journey.</p>
+        <p className="sub">
+          {pendingAnswers
+            ? 'Your persona is ready! Create an account to reveal and keep your result.'
+            : 'Save your persona, track progress, and unlock your learning journey.'}
+        </p>
         {error && <div className="form-error">{error}</div>}
         <div className="field">
           <label htmlFor="name">Full name *</label>
@@ -78,7 +84,7 @@ export default function RegisterPage() {
         <button className="btn" style={{ width: '100%' }} onClick={submit} disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
         </button>
-        <p className="auth-foot">Already have an account? <Link to="/login">Log in</Link></p>
+        <p className="auth-foot">Already have an account? <Link to="/login" state={pendingAnswers ? { pendingAnswers } : undefined}>Log in</Link></p>
       </div>
     </div>
   );

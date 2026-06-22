@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
+import { api } from '../lib/api.js';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,12 +12,24 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
+  const pendingAnswers = location.state?.pendingAnswers;
 
   async function submit() {
     setError('');
     setBusy(true);
     try {
       const user = await login(email, password);
+      // If they came from the quiz, score + save their answers and show the result.
+      if (Array.isArray(pendingAnswers) && pendingAnswers.length) {
+        try {
+          const { result } = await api.saveResult(pendingAnswers);
+          navigate('/result', { replace: true, state: { result, saved: true } });
+          return;
+        } catch {
+          navigate('/my-results', { replace: true });
+          return;
+        }
+      }
       navigate(user.role === 'admin' ? '/admin' : from, { replace: true });
     } catch (e) {
       setError(e.message);
@@ -29,7 +42,11 @@ export default function LoginPage() {
     <div className="wrap">
       <div className="auth-card">
         <h1>Welcome back</h1>
-        <p className="sub">Log in to view and save your AI Persona results.</p>
+        <p className="sub">
+          {pendingAnswers
+            ? 'Log in to reveal and save your AI Persona result.'
+            : 'Log in to view and save your AI Persona results.'}
+        </p>
         {error && <div className="form-error">{error}</div>}
         <div className="field">
           <label htmlFor="email">Email</label>
@@ -44,7 +61,7 @@ export default function LoginPage() {
         <button className="btn" style={{ width: '100%' }} onClick={submit} disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
-        <p className="auth-foot">New here? <Link to="/register">Create an account</Link></p>
+        <p className="auth-foot">New here? <Link to="/register" state={pendingAnswers ? { pendingAnswers } : undefined}>Create an account</Link></p>
       </div>
     </div>
   );

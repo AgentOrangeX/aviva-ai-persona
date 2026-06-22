@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { Badge, COLORS } from '../components/PersonaArt.jsx';
 import { Confetti, useToast } from '../components/UI.jsx';
 import { api } from '../lib/api.js';
@@ -31,7 +31,6 @@ const ALL_ACH = Object.keys(ACHIEVEMENTS);
 
 export default function ResultPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
   const [showShare, setShowShare] = useState(false);
@@ -65,11 +64,6 @@ export default function ResultPage() {
   const c = COLORS[p.key] || COLORS.explorer;
   const achievements = result.achievements || [];
 
-  async function handleSaveAfterLogin() {
-    // anonymous users are routed to register, carrying the result to save after
-    navigate('/register', { state: { pendingResult: result } });
-  }
-
   return (
     <>
       <Confetti fire={true} />
@@ -83,13 +77,6 @@ export default function ResultPage() {
           <p className="tag">{p.title}</p>
           <p className="tag" style={{ marginTop: 12 }}>{p.blurb}</p>
         </section>
-
-        {!user && (
-          <div className="save-banner">
-            <p>💾 Want to keep this result and track your AI journey? Create a free account.</p>
-            <button className="btn sun sm" onClick={handleSaveAfterLogin}>Save my result</button>
-          </div>
-        )}
 
         <div className="grid2">
           <div className="panel">

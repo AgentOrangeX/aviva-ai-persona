@@ -27,7 +27,7 @@ export default function IntroPage() {
         </p>
         <div className="hero-cta">
           <Link to="/quiz" className="btn">Start the quiz →</Link>
-          {!user && <Link to="/login" className="btn outline">Log in to save results</Link>}
+          {!user && <Link to="/login" className="btn outline">Log in</Link>}
         </div>
 
         <div className="persona-peek" aria-hidden="true">
