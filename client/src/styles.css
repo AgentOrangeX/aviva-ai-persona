@@ -176,6 +176,9 @@ input,select{font-family:inherit;font-size:1rem}
 .champ .score{margin-left:auto;text-align:right}
 .champ .score b{font-size:1.3rem;font-weight:900;color:var(--blue)}
 .champ .score span{font-size:.68rem;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.champ-link{width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:border-color .16s,box-shadow .16s,transform .16s}
+.champ-link:hover{border-color:var(--blue);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.champ-chevron{font-size:1.6rem;font-weight:800;color:var(--ink-soft);margin-left:14px;flex:none}
 .admin-note{font-size:.8rem;color:var(--ink-soft);background:rgba(23,111,193,.08);border:1px solid rgba(23,111,193,.25);padding:14px 16px;border-radius:var(--r-sm);margin:18px 0}
 
 /* toast */

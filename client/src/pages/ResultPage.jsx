@@ -38,10 +38,11 @@ export default function ResultPage() {
   const [saved, setSaved] = useState(location.state?.saved || false);
 
   const result = location.state?.result;
+  const fromHistory = location.state?.fromHistory || false;
 
   useEffect(() => {
-    if (!result) return;
-    // celebratory toast on mount
+    if (!result || fromHistory) return;
+    // celebratory toast on mount (only for a freshly completed result)
     const t = setTimeout(() => {
       toast({ emoji: result.persona.emoji, title: `You're ${article(result.persona.name)} ${result.persona.name}!`, detail: result.rare ? 'A rare persona — nice!' : 'Explore your strengths below.' });
     }, 400);
@@ -66,7 +67,7 @@ export default function ResultPage() {
 
   return (
     <>
-      <Confetti fire={true} />
+      <Confetti fire={!fromHistory} />
       <div className="wrap">
         <section className="result-hero">
           <div className="badge-stage"><Badge persona={p.key} size={200} /></div>
@@ -161,8 +162,14 @@ export default function ResultPage() {
 
         <div className="result-cta">
           <button className="btn sun" onClick={() => setShowShare(true)}>📇 Share my card</button>
-          <Link to="/quiz" className="btn outline">↻ Retake quiz</Link>
-          {user && <Link to="/my-results" className="btn">My results →</Link>}
+          {fromHistory ? (
+            <Link to="/my-results" className="btn">← Back to my results</Link>
+          ) : (
+            <>
+              <Link to="/quiz" className="btn outline">↻ Retake quiz</Link>
+              {user && <Link to="/my-results" className="btn">My results →</Link>}
+            </>
+          )}
         </div>
       </div>
 
