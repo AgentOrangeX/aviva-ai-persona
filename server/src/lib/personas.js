@@ -18,10 +18,10 @@ export const PERSONAS = {
       'Connect experiments to clear business outcomes',
     ],
     journey: [
-      { title: 'Prompt fundamentals', detail: 'Master clear prompting and verification habits in Microsoft Copilot.', meta: 'Self-paced • 2 hrs' },
-      { title: 'Tool radar', detail: 'Build a personal log of AI tools you have tested and what each is good for.', meta: 'Ongoing' },
-      { title: 'Share your finds', detail: 'Post one experiment a fortnight in the AI Explorers community.', meta: 'Community' },
-      { title: 'Responsible AI basics', detail: 'Learn Aviva\'s guardrails so your experiments stay safe.', meta: 'Required • 1 hr' },
+      { title: 'Prompt fundamentals', detail: 'Master clear prompting and verification habits in Microsoft Copilot.', meta: 'Self-paced • 2 hrs', url: 'https://learn.microsoft.com/en-us/training/modules/write-effective-prompts-do-more-prompting/' },
+      { title: 'Tool radar', detail: 'Build your AI fluency and learn what the main tools are good for.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/ai/' },
+      { title: 'Work smarter with Copilot', detail: 'Hands-on module on using Copilot day to day.', meta: 'Self-paced • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/explore-microsoft-copilot-business-users/' },
+      { title: 'Responsible AI basics', detail: 'Understand the principles of using AI safely and responsibly.', meta: 'Required • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
     ],
     careers: [
       { role: 'AI Adoption Specialist', detail: 'Help teams discover and embed new tools' },
@@ -48,10 +48,10 @@ export const PERSONAS = {
       'Step back to question whether the process should exist at all',
     ],
     journey: [
-      { title: 'Workflow mapping', detail: 'Document one process end-to-end before you automate it.', meta: 'Self-paced • 1 hr' },
-      { title: 'Copilot for productivity', detail: 'Automate summaries, drafting and data tidy-ups.', meta: 'Self-paced • 3 hrs' },
-      { title: 'Power Platform intro', detail: 'Build a simple flow that saves your team time weekly.', meta: 'Workshop' },
-      { title: 'Measure & share', detail: 'Quantify hours saved and present to your team lead.', meta: 'Practice' },
+      { title: 'Workflow mapping', detail: 'Learn to streamline and automate everyday work with Copilot.', meta: 'Self-paced • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/explore-microsoft-copilot-business-users/' },
+      { title: 'Copilot for productivity', detail: 'Automate summaries, drafting and data tidy-ups across Microsoft 365.', meta: 'Self-paced • 3 hrs', url: 'https://learn.microsoft.com/en-us/training/paths/craft-effective-prompts-copilot-microsoft-365/' },
+      { title: 'Power Platform intro', detail: 'Build simple flows that save your team time each week.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/create-powerapps/' },
+      { title: 'Responsible AI basics', detail: 'Apply responsible AI principles to anything you automate.', meta: 'Required • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
     ],
     careers: [
       { role: 'Automation Lead', detail: 'Own process automation across a function' },
@@ -78,10 +78,10 @@ export const PERSONAS = {
       'Set boundaries so you are enabling, not rescuing',
     ],
     journey: [
-      { title: 'AI literacy for all', detail: 'Run a 30-minute "AI show & tell" for your team.', meta: 'Facilitation' },
-      { title: 'Storytelling with data', detail: 'Learn to frame AI wins as relatable stories.', meta: 'Self-paced • 2 hrs' },
-      { title: 'Change champion basics', detail: 'Understand how teams adopt new tools.', meta: 'Workshop' },
-      { title: 'Mentor a newcomer', detail: 'Pair with a colleague just starting their AI journey.', meta: 'Community' },
+      { title: 'AI literacy for all', detail: 'Build the foundational AI fluency you can share with your team.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/ai/' },
+      { title: 'Work smarter with Copilot', detail: 'Practical Copilot skills you can demo to colleagues.', meta: 'Self-paced • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/explore-microsoft-copilot-business-users/' },
+      { title: 'AI for business leaders', detail: 'How teams adopt AI, and how to bring people with you.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/transform-your-business-with-microsoft-ai/' },
+      { title: 'Responsible AI basics', detail: 'Ground your advocacy in responsible AI principles.', meta: 'Required • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
     ],
     careers: [
       { role: 'AI Enablement Manager', detail: 'Lead adoption programmes across teams' },
@@ -108,10 +108,10 @@ export const PERSONAS = {
       'Pick your battles — not every idea needs to be pursued now',
     ],
     journey: [
-      { title: 'Design thinking', detail: 'Reframe a real Aviva problem from the customer\'s view.', meta: 'Workshop' },
-      { title: 'GenAI use-case design', detail: 'Sketch three novel AI concepts for your area.', meta: 'Self-paced • 3 hrs' },
-      { title: 'Pitch & prototype', detail: 'Present one idea to an innovation forum.', meta: 'Practice' },
-      { title: 'Responsible innovation', detail: 'Stress-test ideas against ethics and risk.', meta: 'Required • 1 hr' },
+      { title: 'AI fundamentals', detail: 'Understand what generative AI can and cannot do.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/get-started-with-artificial-intelligence-on-azure/' },
+      { title: 'GenAI use-case design', detail: 'Explore Azure OpenAI and how to shape novel AI concepts.', meta: 'Self-paced • 3 hrs', url: 'https://learn.microsoft.com/en-us/training/paths/develop-ai-solutions-azure-openai/' },
+      { title: 'Prompt engineering', detail: 'Sharpen the prompting skills behind great prototypes.', meta: 'Self-paced • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/write-effective-prompts-do-more-prompting/' },
+      { title: 'Responsible innovation', detail: 'Stress-test ideas against ethics and risk.', meta: 'Required • 1 hr', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
     ],
     careers: [
       { role: 'AI Product Owner', detail: 'Shape AI-powered products end-to-end' },
@@ -138,10 +138,10 @@ export const PERSONAS = {
       'Mentor others into building — multiply your impact',
     ],
     journey: [
-      { title: 'Data foundations', detail: 'Solidify data handling and quality basics.', meta: 'Self-paced • 3 hrs' },
-      { title: 'Build with the API', detail: 'Create a small tool using the Claude/Copilot API.', meta: 'Hands-on • 4 hrs' },
-      { title: 'Responsible AI engineering', detail: 'Apply Aviva\'s model governance to your build.', meta: 'Required • 2 hrs' },
-      { title: 'Ship & document', detail: 'Release one internal tool with clear docs.', meta: 'Practice' },
+      { title: 'Azure AI fundamentals', detail: 'Solidify the foundations of AI services and how they fit together.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/get-started-with-artificial-intelligence-on-azure/' },
+      { title: 'Build with Azure OpenAI', detail: 'Create a small tool using the Azure OpenAI service and APIs.', meta: 'Hands-on • 4 hrs', url: 'https://learn.microsoft.com/en-us/training/paths/develop-ai-solutions-azure-openai/' },
+      { title: 'Responsible AI engineering', detail: 'Apply responsible AI to anything you build.', meta: 'Required • 2 hrs', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
+      { title: 'GitHub Copilot for devs', detail: 'Speed up your build workflow with AI-assisted coding.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/copilot/' },
     ],
     careers: [
       { role: 'AI Engineer', detail: 'Build and deploy AI capabilities' },
@@ -168,10 +168,10 @@ export const PERSONAS = {
       'Make space for the wild ideas your strategy might miss',
     ],
     journey: [
-      { title: 'AI strategy essentials', detail: 'Map AI opportunities to business objectives.', meta: 'Self-paced • 2 hrs' },
-      { title: 'Risk & regulation in AI', detail: 'Understand FCA expectations and model risk.', meta: 'Required • 2 hrs' },
-      { title: 'Portfolio prioritisation', detail: 'Rank AI initiatives by value and feasibility.', meta: 'Workshop' },
-      { title: 'Lead a roadmap', detail: 'Co-author an AI roadmap for your area.', meta: 'Practice' },
+      { title: 'AI for business leaders', detail: 'Plan, strategise and scale AI initiatives responsibly.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/transform-your-business-with-microsoft-ai/' },
+      { title: 'Responsible AI principles', detail: 'Understand the governance and risk expectations for AI.', meta: 'Required • 2 hrs', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
+      { title: 'AI fluency foundations', detail: 'Map AI opportunities to business objectives with confidence.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/ai/' },
+      { title: 'Lead a roadmap', detail: 'Apply Copilot adoption practices to plan your area\'s roll-out.', meta: 'Self-paced', url: 'https://adoption.microsoft.com/en-us/copilot/' },
     ],
     careers: [
       { role: 'AI Strategy Manager', detail: 'Set the AI agenda for a business unit' },
@@ -198,10 +198,10 @@ export const PERSONAS = {
       'Stay close to the detail so your vision stays real',
     ],
     journey: [
-      { title: 'Lead AI change', detail: 'Frame a vision and bring your area with you.', meta: 'Programme' },
-      { title: 'Executive AI fluency', detail: 'Speak credibly about AI value and risk to leadership.', meta: 'Self-paced • 3 hrs' },
-      { title: 'Build a champions network', detail: 'Recruit and coach 5 AI champions.', meta: 'Practice' },
-      { title: 'Responsible AI leadership', detail: 'Own the ethics conversation for your team.', meta: 'Required • 2 hrs' },
+      { title: 'AI for business leaders', detail: 'Frame a vision and lead AI adoption across your area.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/training/paths/transform-your-business-with-microsoft-ai/' },
+      { title: 'Copilot adoption playbook', detail: 'Practical guidance for driving adoption at scale.', meta: 'Self-paced', url: 'https://adoption.microsoft.com/en-us/copilot/' },
+      { title: 'Executive AI fluency', detail: 'Speak credibly about AI value and risk to leadership.', meta: 'Self-paced', url: 'https://learn.microsoft.com/en-us/ai/' },
+      { title: 'Responsible AI leadership', detail: 'Own the ethics conversation for your team.', meta: 'Required • 2 hrs', url: 'https://learn.microsoft.com/en-us/training/modules/embrace-responsible-ai-principles-practices/' },
     ],
     careers: [
       { role: 'Head of AI Enablement', detail: 'Lead Aviva\'s adoption at scale' },

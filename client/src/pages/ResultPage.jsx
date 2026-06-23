@@ -116,9 +116,23 @@ export default function ResultPage() {
               <div className="step" key={i}>
                 <span className="num" style={{ background: i % 2 ? c[1] : c[0] }}>{i + 1}</span>
                 <div className="body">
-                  <b>{step.title}</b>
+                  <b>
+                    {step.url ? (
+                      <a href={step.url} target="_blank" rel="noopener noreferrer" className="step-link">
+                        {step.title} <span className="step-ext" aria-hidden="true">↗</span>
+                      </a>
+                    ) : (
+                      step.title
+                    )}
+                  </b>
                   <p>{step.detail}</p>
-                  <span className="meta">{step.meta}</span>
+                  {step.url ? (
+                    <a href={step.url} target="_blank" rel="noopener noreferrer" className="meta meta-link">
+                      {step.meta} · Open resource ↗
+                    </a>
+                  ) : (
+                    <span className="meta">{step.meta}</span>
+                  )}
                 </div>
               </div>
             ))}
