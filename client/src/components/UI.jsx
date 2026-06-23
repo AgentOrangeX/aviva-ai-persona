@@ -22,7 +22,7 @@ export function TopBar() {
             <>
               <Link to="/my-results" className="ghost">My results</Link>
               {isAdmin && <Link to="/admin" className="ghost">Admin</Link>}
-              <span className="who">{user.name.split(' ')[0]}</span>
+              <Link to="/profile" className="who who-link">{user.name.split(' ')[0]}</Link>
               <button className="ghost" onClick={() => { logout(); navigate('/'); }}>Log out</button>
             </>
           ) : (

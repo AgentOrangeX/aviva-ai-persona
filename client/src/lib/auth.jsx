@@ -48,8 +48,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Apply a profile update returned by the API. A new token is issued when
+  // name/email change, so swap it in too.
+  const applyProfileUpdate = useCallback(({ user: nextUser, token }) => {
+    if (token) setToken(token);
+    if (nextUser) setUser(nextUser);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, applyProfileUpdate, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   );

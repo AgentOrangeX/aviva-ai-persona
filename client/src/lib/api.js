@@ -40,6 +40,8 @@ export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: payload, auth: false }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload, auth: false }),
   me: () => request('/auth/me'),
+  updateProfile: (payload) => request('/auth/profile', { method: 'PATCH', body: payload }),
+  changePassword: (payload) => request('/auth/change-password', { method: 'POST', body: payload }),
   // quiz
   getQuestions: () => request('/quiz/questions', { auth: false }),
   getPersonas: () => request('/quiz/personas', { auth: false }),
