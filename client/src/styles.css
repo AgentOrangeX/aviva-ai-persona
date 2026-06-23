@@ -132,6 +132,7 @@ input,select{font-family:inherit;font-size:1rem}
 .chip{display:inline-flex;align-items:center;gap:8px;font-size:.86rem;font-weight:700;padding:9px 15px;border-radius:999px;background:#fff;border:1.5px solid var(--line);color:var(--ink)}
 .chip .em{font-size:1.05rem}
 .career{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+.section-note{margin-top:16px;font-size:.8rem;line-height:1.5;color:var(--ink-soft);font-style:italic;border-top:1px dashed var(--line);padding-top:12px}
 .career .role{padding:16px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:#fff}
 .career .role b{display:block;font-size:.98rem;font-weight:800;margin-bottom:3px}
 .career .role span{font-size:.82rem;color:var(--ink-soft)}

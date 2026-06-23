@@ -147,6 +147,7 @@ export default function ResultPage() {
                 <div className="role" key={i}><b>{r.role}</b><span>{r.detail}</span></div>
               ))}
             </div>
+            <p className="section-note">These are some suggested roles that are starting to emerge in the AI space in the insurance sector. As these types of roles arise at Aviva, they will appear here.</p>
           </div>
           <div className="panel">
             <h3><span className="ic" style={{ background: c[1] }}>◆</span> Communities to join</h3>
