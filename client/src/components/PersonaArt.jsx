@@ -127,6 +127,8 @@ export function PersonaArt({ persona, size = 72 }) {
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
       </defs>
+      {/* Faint full-bleed disc so white motifs above the orb stay visible on light backgrounds */}
+      <circle cx="45" cy="45" r="44" fill={c[1]} opacity=".18" />
       <circle cx="45" cy="52" r="33" fill={`url(#g${id})`} />
       <circle cx="45" cy="52" r="33" fill={`url(#s${id})`} />
       <g>{FACES[persona]}</g>

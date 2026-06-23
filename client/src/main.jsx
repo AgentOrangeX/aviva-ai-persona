@@ -35,7 +35,7 @@ function App() {
           </Routes>
         </main>
         <footer>
-          Aviva AI Persona · A playful way to grow our AI culture · Demo content for illustration
+          Aviva AI Persona · A playful way to grow our AI culture
         </footer>
       </ToastProvider>
     </AuthProvider>
