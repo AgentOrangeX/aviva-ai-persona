@@ -151,10 +151,9 @@ export default function ResultPage() {
           </div>
           <div className="panel">
             <h3><span className="ic" style={{ background: c[1] }}>◆</span> Communities to join</h3>
-            <div className="chips">
-              {p.communities.map((cm, i) => (
-                <span className="chip" key={i}><span className="em">{cm.emoji}</span>{cm.name}</span>
-              ))}
+            <div className="coming-soon">
+              <span className="coming-soon-badge">Coming soon</span>
+              <p>AI communities at Aviva are being set up. Once they launch, the ones suited to your persona will appear here.</p>
             </div>
           </div>
         </div>
