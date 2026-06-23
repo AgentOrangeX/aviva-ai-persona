@@ -49,6 +49,7 @@ export const api = {
   scorePreview: (answers) => request('/results/score', { method: 'POST', body: { answers }, auth: false }),
   saveResult: (answers) => request('/results', { method: 'POST', body: { answers } }),
   myResults: () => request('/results/mine'),
+  leaderboard: () => request('/results/leaderboard'),
   // admin
   adminOverview: () => request('/admin/overview'),
   adminDistribution: () => request('/admin/distribution'),

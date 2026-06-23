@@ -21,6 +21,7 @@ export function TopBar() {
           {user ? (
             <>
               <Link to="/my-results" className="ghost">My results</Link>
+              <Link to="/leaderboard" className="ghost">Leaderboard</Link>
               {isAdmin && <Link to="/admin" className="ghost">Admin</Link>}
               <Link to="/profile" className="who who-link">{user.name.split(' ')[0]}</Link>
               <button className="ghost" onClick={() => { logout(); navigate('/'); }}>Log out</button>

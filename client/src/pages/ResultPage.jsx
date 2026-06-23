@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Badge, COLORS } from '../components/PersonaArt.jsx';
 import { Confetti, useToast } from '../components/UI.jsx';
@@ -196,6 +196,20 @@ export default function ResultPage() {
 
 function ShareModal({ result, onClose, toast }) {
   const p = result.persona;
+  const c = COLORS[p.key] || COLORS.explorer;
+  const cardRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [canShareFiles, setCanShareFiles] = useState(false);
+
+  useEffect(() => {
+    // Feature-detect Web Share with files (mobile mostly).
+    try {
+      setCanShareFiles(!!navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }));
+    } catch {
+      setCanShareFiles(false);
+    }
+  }, []);
+
   function copy() {
     const text = `I'm ${article(p.name)} ${p.name} ${p.emoji} — ${p.title}. Discover your Aviva AI Persona!`;
     navigator.clipboard?.writeText(text).then(
@@ -203,11 +217,151 @@ function ShareModal({ result, onClose, toast }) {
       () => toast({ emoji: '⚠️', title: 'Could not copy' })
     );
   }
+
+  // Render an SVG element to a loaded HTMLImageElement.
+  function svgToImage(svgEl, px) {
+    return new Promise((resolve, reject) => {
+      const xml = new XMLSerializer().serializeToString(svgEl);
+      const svg64 = btoa(unescape(encodeURIComponent(xml)));
+      const img = new Image();
+      img.width = px;
+      img.height = px;
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = `data:image/svg+xml;base64,${svg64}`;
+    });
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Compose the share card on a canvas and return a PNG blob.
+  async function buildImage() {
+    const W = 1080;
+    const H = 1350; // portrait, social-friendly
+    const scale = 2; // crisp on retina
+    const canvas = document.createElement('canvas');
+    canvas.width = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // Background
+    ctx.fillStyle = '#FBFAF6';
+    ctx.fillRect(0, 0, W, H);
+
+    // Top banner gradient (persona colours)
+    const grad = ctx.createLinearGradient(0, 0, W, 620);
+    grad.addColorStop(0, c[0]);
+    grad.addColorStop(1, c[1]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 620);
+
+    // Brand line
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '700 30px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('AVIVA · AI PERSONA', W / 2, 90);
+
+    // Badge (rasterised from the hidden SVG in the modal)
+    const svgEl = cardRef.current?.querySelector('svg');
+    if (svgEl) {
+      const badgeImg = await svgToImage(svgEl, 360);
+      ctx.drawImage(badgeImg, W / 2 - 180, 150, 360, 360);
+    }
+
+    // Persona name
+    ctx.fillStyle = '#10243A';
+    ctx.font = '900 76px Segoe UI, system-ui, sans-serif';
+    ctx.fillText(`${p.emoji} ${p.name}`, W / 2, 760);
+
+    // Title (wrapped)
+    ctx.fillStyle = '#3C5267';
+    ctx.font = '500 36px Segoe UI, system-ui, sans-serif';
+    wrapText(ctx, p.title, W / 2, 825, W - 200, 46);
+
+    // Rarity pill
+    if (result.rare) {
+      ctx.fillStyle = c[1];
+      const pillW = 260, pillH = 60, pillX = W / 2 - pillW / 2, pillY = 905;
+      roundRect(ctx, pillX, pillY, pillW, pillH, 30);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 30px Segoe UI, system-ui, sans-serif';
+      ctx.fillText('RARE FIND 💎', W / 2, pillY + 40);
+    }
+
+    // Superpowers heading
+    let y = result.rare ? 1030 : 980;
+    ctx.fillStyle = '#10243A';
+    ctx.font = '800 34px Segoe UI, system-ui, sans-serif';
+    ctx.fillText('My AI superpowers', W / 2, y);
+    y += 56;
+    ctx.fillStyle = '#3C5267';
+    ctx.font = '500 30px Segoe UI, system-ui, sans-serif';
+    p.superpowers.slice(0, 3).forEach((s) => {
+      const short = s.split('—')[0].trim();
+      wrapText(ctx, `• ${short}`, W / 2, y, W - 220, 40);
+      y += 56;
+    });
+
+    // Footer
+    ctx.fillStyle = '#8A93A0';
+    ctx.font = '600 26px Segoe UI, system-ui, sans-serif';
+    ctx.fillText('Discover your AI persona at Aviva', W / 2, H - 60);
+
+    return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
+  }
+
+  async function download() {
+    setBusy(true);
+    try {
+      const blob = await buildImage();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aviva-ai-persona-${p.key}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ emoji: '🖼️', title: 'Image downloaded' });
+    } catch {
+      toast({ emoji: '⚠️', title: 'Could not create image' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareImage() {
+    setBusy(true);
+    try {
+      const blob = await buildImage();
+      const file = new File([blob], `aviva-ai-persona-${p.key}.png`, { type: 'image/png' });
+      await navigator.share({
+        files: [file],
+        title: 'My Aviva AI Persona',
+        text: `I'm ${article(p.name)} ${p.name} ${p.emoji} — ${p.title}.`,
+      });
+    } catch {
+      // user cancelled or share failed — no toast needed
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
         <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
-        <div className="share-card">
+        <div className="share-card" ref={cardRef}>
           <div className="sc-top">
             <div className="sc-brand">Aviva · AI Persona</div>
             <div className="sc-badge"><Badge persona={p.key} size={120} /></div>
@@ -224,11 +378,32 @@ function ShareModal({ result, onClose, toast }) {
           </div>
         </div>
         <div className="modal-actions">
-          <button className="btn sm" onClick={copy}>📋 Copy share text</button>
+          <button className="btn sm" onClick={download} disabled={busy}>{busy ? 'Creating…' : '⬇ Download image'}</button>
+          {canShareFiles && <button className="btn sun sm" onClick={shareImage} disabled={busy}>📤 Share</button>}
+          <button className="btn outline sm" onClick={copy}>📋 Copy text</button>
         </div>
       </div>
     </div>
   );
+}
+
+// Canvas helper: centre-aligned word wrap.
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let yy = y;
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, yy);
+      line = w;
+      yy += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, yy);
+  return yy;
 }
 
 function article(word) {
