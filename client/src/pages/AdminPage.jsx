@@ -15,7 +15,15 @@ export default function AdminPage() {
   const [distribution, setDistribution] = useState(null);
   const [heatmap, setHeatmap] = useState(null);
   const [champions, setChampions] = useState(null);
+  const [users, setUsers] = useState(null);
+  const [confirmUser, setConfirmUser] = useState(null); // user pending deletion
+  const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+
+  function loadUsers() {
+    api.adminUsers().then((u) => setUsers(u.users)).catch((e) => setError(e.message));
+  }
 
   useEffect(() => {
     Promise.all([api.adminOverview(), api.adminDistribution(), api.adminHeatmap(), api.adminChampions()])
@@ -26,7 +34,32 @@ export default function AdminPage() {
         setChampions(c.champions);
       })
       .catch((e) => setError(e.message));
+    loadUsers();
   }, []);
+
+  async function handleDelete() {
+    if (!confirmUser) return;
+    setDeleting(true);
+    setNotice('');
+    try {
+      const out = await api.adminDeleteFirstResult(confirmUser.id);
+      setNotice(
+        `Deleted ${confirmUser.name}'s first result. ` +
+          (out.remaining > 0
+            ? `Their next result is now their leaderboard entry (${out.remaining} result${out.remaining === 1 ? '' : 's'} remaining).`
+            : `They now have no results and have dropped off the leaderboard until they retake.`)
+      );
+      setConfirmUser(null);
+      loadUsers();
+      // refresh headline + distribution so counts stay accurate
+      api.adminOverview().then(setOverview).catch(() => {});
+      api.adminDistribution().then(setDistribution).catch(() => {});
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (error) return <div className="wrap"><div className="center-msg">{error}</div></div>;
   if (!overview) return <div className="wrap"><div className="center-msg">Loading dashboard…</div></div>;
@@ -101,6 +134,102 @@ export default function AdminPage() {
           ))
         )}
       </div>
+
+      <div className="panel">
+        <h3>👥 User management</h3>
+        <p className="admin-note">
+          Every registered user and their <strong>first result</strong> — the one that counts
+          toward the leaderboard. Deleting it promotes their next-oldest result to the
+          leaderboard; if they have none left, they drop off until they retake.
+        </p>
+
+        {notice && <div className="admin-flash ok">{notice}</div>}
+
+        {!users ? (
+          <p style={{ color: 'var(--ink-soft)' }}>Loading users…</p>
+        ) : users.length === 0 ? (
+          <p style={{ color: 'var(--ink-soft)' }}>No registered users yet.</p>
+        ) : (
+          <div className="utable-scroll">
+            <table className="utable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Business area</th>
+                  <th>First result</th>
+                  <th className="num">Results</th>
+                  <th className="act">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <b>{u.name}</b>
+                      {u.role === 'admin' && <span className="utag">admin</span>}
+                      <span className="usub">{u.email}</span>
+                    </td>
+                    <td>{u.businessArea || '—'}</td>
+                    <td>
+                      {u.firstResult ? (
+                        <span>
+                          {u.firstResult.personaEmoji} {u.firstResult.personaName}
+                          <span className="usub">
+                            score {u.firstResult.champScore} ·{' '}
+                            {new Date(u.firstResult.createdAt).toLocaleDateString()}
+                          </span>
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--ink-soft)' }}>No result</span>
+                      )}
+                    </td>
+                    <td className="num">{u.resultCount}</td>
+                    <td className="act">
+                      <button
+                        className="btn-danger sm"
+                        disabled={!u.firstResult}
+                        onClick={() => { setError(''); setNotice(''); setConfirmUser(u); }}
+                      >
+                        Delete first result
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {confirmUser && (
+        <div className="modal-backdrop" onClick={() => !deleting && setConfirmUser(null)}>
+          <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>⚠️ Delete first result?</h3>
+            <p>
+              You are about to permanently delete <strong>{confirmUser.name}</strong>'s first
+              result
+              {confirmUser.firstResult && (
+                <> ({confirmUser.firstResult.personaEmoji} {confirmUser.firstResult.personaName},
+                {' '}score {confirmUser.firstResult.champScore})</>
+              )}.
+            </p>
+            <p className="modal-warn">
+              This is the result currently counting toward the leaderboard. It cannot be undone.
+              {confirmUser.resultCount > 1
+                ? ' Their next-oldest result will become their new leaderboard entry.'
+                : ' They have no other results, so they will drop off the leaderboard until they retake the assessment.'}
+            </p>
+            <div className="modal-actions">
+              <button className="btn outline sm" disabled={deleting} onClick={() => setConfirmUser(null)}>
+                Cancel
+              </button>
+              <button className="btn-danger" disabled={deleting} onClick={handleDelete}>
+                {deleting ? 'Deleting…' : 'Yes, delete it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ height: 50 }} />
     </div>

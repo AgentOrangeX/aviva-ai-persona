@@ -55,4 +55,7 @@ export const api = {
   adminDistribution: () => request('/admin/distribution'),
   adminHeatmap: () => request('/admin/heatmap'),
   adminChampions: () => request('/admin/champions'),
+  adminUsers: () => request('/admin/users'),
+  adminDeleteFirstResult: (userId) =>
+    request(`/admin/users/${userId}/first-result`, { method: 'DELETE' }),
 };

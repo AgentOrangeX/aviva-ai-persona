@@ -110,4 +110,80 @@ router.get('/champions', (_req, res) => {
   });
 });
 
+// GET /api/admin/users — every user, with their FIRST result (the one that
+// counts toward the leaderboard, identified by the lowest result id) and a
+// total count of how many results they have saved.
+router.get('/users', (_req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT u.id, u.name, u.email, u.job_title, u.business_area, u.role, u.created_at,
+              fr.id          AS first_result_id,
+              fr.persona     AS first_persona,
+              fr.champ_score AS first_champ_score,
+              fr.created_at  AS first_result_at,
+              (SELECT COUNT(*) FROM results rc WHERE rc.user_id = u.id) AS result_count
+         FROM users u
+         LEFT JOIN (
+           SELECT r.* FROM results r
+           JOIN (SELECT user_id, MIN(id) AS first_id FROM results GROUP BY user_id) f
+             ON r.id = f.first_id
+         ) fr ON fr.user_id = u.id
+        ORDER BY u.name COLLATE NOCASE ASC`
+    )
+    .all();
+
+  res.json({
+    users: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      jobTitle: r.job_title,
+      businessArea: r.business_area,
+      role: r.role,
+      createdAt: r.created_at,
+      resultCount: r.result_count,
+      firstResult: r.first_result_id
+        ? {
+            id: r.first_result_id,
+            persona: r.first_persona,
+            personaName: PERSONAS[r.first_persona]?.name,
+            personaEmoji: PERSONAS[r.first_persona]?.emoji,
+            champScore: r.first_champ_score,
+            createdAt: r.first_result_at,
+          }
+        : null,
+    })),
+  });
+});
+
+// DELETE /api/admin/users/:id/first-result — removes a user's FIRST result
+// (lowest result id). Because the leaderboard selects each user's MIN(id)
+// result, their next-oldest result automatically becomes the new leaderboard
+// entry. If they have no remaining results they simply drop off until they
+// retake the assessment.
+router.delete('/users/:id/first-result', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Invalid user id.' });
+  }
+
+  const user = db.prepare('SELECT id, name FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+
+  const first = db
+    .prepare('SELECT id FROM results WHERE user_id = ? ORDER BY id ASC LIMIT 1')
+    .get(userId);
+  if (!first) {
+    return res.status(404).json({ error: 'This user has no results to delete.' });
+  }
+
+  db.prepare('DELETE FROM results WHERE id = ?').run(first.id);
+
+  const remaining = db
+    .prepare('SELECT COUNT(*) n FROM results WHERE user_id = ?')
+    .get(userId).n;
+
+  res.json({ deletedResultId: first.id, remaining });
+});
+
 export default router;
