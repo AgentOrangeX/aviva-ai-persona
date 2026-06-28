@@ -250,3 +250,28 @@ footer{text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:.8rem
   .dist-bar .lab{width:120px}
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* ---------- Personas explainer page ---------- */
+.persona-chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:34px 0 6px}
+.persona-chip{display:inline-flex;align-items:center;gap:7px;font-size:.85rem;font-weight:800;color:var(--ink);background:#fff;border:1.5px solid var(--line);padding:7px 14px 7px 8px;border-radius:999px;transition:.16s}
+.persona-chip:hover{border-color:var(--blue);color:var(--blue);transform:translateY(-2px)}
+
+.persona-explainers{display:grid;gap:26px;margin:46px 0 60px}
+.px-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:80px}
+.px-band{height:7px}
+.px-body{padding:30px 32px 32px}
+.px-head{display:flex;align-items:center;gap:16px}
+.px-name{font-size:1.55rem;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+.px-title{font-size:.92rem;font-weight:700;color:var(--ink-soft);margin-top:2px}
+.px-blurb{font-size:1.02rem;color:var(--ink);margin:16px 0 22px}
+.px-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.px-col h3{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:11px}
+.px-list{list-style:none}
+.px-list li{position:relative;padding-left:24px;margin-bottom:10px;font-size:.93rem;line-height:1.45}
+.px-sp li::before{content:"";position:absolute;left:0;top:.5em;width:9px;height:9px;border-radius:50%;background:var(--bullet,var(--blue))}
+.px-gr li::before{content:"\2192";position:absolute;left:0;top:0;font-weight:900;color:var(--ink-soft)}
+
+@media(max-width:640px){
+  .px-cols{grid-template-columns:1fr;gap:18px}
+  .px-body{padding:24px 22px 26px}
+}

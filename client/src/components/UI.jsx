@@ -18,6 +18,7 @@ export function TopBar() {
           </span>
         </Link>
         <nav className="nav-actions">
+          <Link to="/personas" className="ghost">Personas</Link>
           {user ? (
             <>
               <Link to="/my-results" className="ghost">My results</Link>

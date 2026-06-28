@@ -7,6 +7,7 @@ import { AuthProvider } from './lib/auth.jsx';
 import { TopBar, ToastProvider, ProtectedRoute, AdminRoute } from './components/UI.jsx';
 
 import IntroPage from './pages/IntroPage.jsx';
+import PersonasPage from './pages/PersonasPage.jsx';
 import QuizPage from './pages/QuizPage.jsx';
 import ResultPage from './pages/ResultPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -25,6 +26,7 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<IntroPage />} />
+            <Route path="/personas" element={<PersonasPage />} />
             <Route path="/quiz" element={<QuizPage />} />
             <Route path="/result" element={<ProtectedRoute><ResultPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
