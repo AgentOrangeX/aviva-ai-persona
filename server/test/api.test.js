@@ -125,3 +125,56 @@ test('wrong password is rejected', async () => {
   const r = await call('/api/auth/login', { method: 'POST', body: { email: 'admin@test.local', password: 'nope' } });
   assert.equal(r.status, 401);
 });
+
+test('non-admin cannot change roles', async () => {
+  const list = await call('/api/admin/users', { token: adminToken });
+  const target = list.body.users.find((u) => u.email === 'user@test.local');
+  const r = await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'admin' }, token: userToken });
+  assert.equal(r.status, 403);
+});
+
+test('admin can grant admin access to another user', async () => {
+  const list = await call('/api/admin/users', { token: adminToken });
+  const target = list.body.users.find((u) => u.email === 'user@test.local');
+
+  const r = await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'admin' }, token: adminToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.role, 'admin');
+  assert.equal(r.body.changed, true);
+
+  // the promoted user's ALREADY-ISSUED token should now pass requireAdmin,
+  // because the check re-reads the DB rather than trusting the stale claim
+  const check = await call('/api/admin/overview', { token: userToken });
+  assert.equal(check.status, 200);
+});
+
+test('revoking admin access takes effect immediately on an existing token', async () => {
+  const list = await call('/api/admin/users', { token: adminToken });
+  const target = list.body.users.find((u) => u.email === 'user@test.local');
+
+  const revoke = await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'user' }, token: adminToken });
+  assert.equal(revoke.status, 200);
+  assert.equal(revoke.body.role, 'user');
+
+  // same old token as before — should now be rejected without waiting for expiry
+  const check = await call('/api/admin/overview', { token: userToken });
+  assert.equal(check.status, 403);
+});
+
+test('admin cannot remove their own admin access', async () => {
+  const me = await call('/api/auth/me', { token: adminToken });
+  const r = await call(`/api/admin/users/${me.body.user.id}/role`, { method: 'PATCH', body: { role: 'user' }, token: adminToken });
+  assert.equal(r.status, 400);
+});
+
+test('invalid role value is rejected', async () => {
+  const list = await call('/api/admin/users', { token: adminToken });
+  const target = list.body.users.find((u) => u.email === 'user@test.local');
+  const r = await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'superadmin' }, token: adminToken });
+  assert.equal(r.status, 400);
+});
+
+test('unknown user id returns 404', async () => {
+  const r = await call('/api/admin/users/999999/role', { method: 'PATCH', body: { role: 'admin' }, token: adminToken });
+  assert.equal(r.status, 404);
+});

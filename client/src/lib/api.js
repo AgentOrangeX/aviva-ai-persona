@@ -58,4 +58,6 @@ export const api = {
   adminUsers: () => request('/admin/users'),
   adminDeleteFirstResult: (userId) =>
     request(`/admin/users/${userId}/first-result`, { method: 'DELETE' }),
+  adminSetUserRole: (userId, role) =>
+    request(`/admin/users/${userId}/role`, { method: 'PATCH', body: { role } }),
 };

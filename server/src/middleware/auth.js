@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../lib/config.js';
+import db from '../db/index.js';
 
 export function signToken(user) {
   return jwt.sign(
@@ -34,9 +35,20 @@ export function requireAuth(req, res, next) {
   next();
 }
 
-/** Requires the admin role. Order after requireAuth. */
+/**
+ * Requires the admin role. Order after requireAuth.
+ *
+ * Deliberately re-reads the role from the database rather than trusting the
+ * JWT's `role` claim: tokens live for config.jwtExpiresIn (7 days by
+ * default), so if we only checked the claim, revoking someone's admin
+ * access would not take effect until their existing token expired. Grants
+ * take effect immediately either way, since a fresh grant is a superset of
+ * what the stale claim already allowed.
+ */
 export function requireAdmin(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Administrator access only.' });
+  const row = db.prepare('SELECT role FROM users WHERE id = ?').get(req.user.sub);
+  if (!row) return res.status(401).json({ error: 'Authentication required.' });
+  if (row.role !== 'admin') return res.status(403).json({ error: 'Administrator access only.' });
   next();
 }
