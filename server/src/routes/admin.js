@@ -186,4 +186,34 @@ router.delete('/users/:id/first-result', (req, res) => {
   res.json({ deletedResultId: first.id, remaining });
 });
 
+// PATCH /api/admin/users/:id/role — grant or revoke admin access.
+// Self-demotion is blocked so an admin can never lock themselves out; if
+// the team needs that, another admin has to do it.
+router.patch('/users/:id/role', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Invalid user id.' });
+  }
+
+  const { role } = req.body || {};
+  if (role !== 'admin' && role !== 'user') {
+    return res.status(400).json({ error: "Role must be 'admin' or 'user'." });
+  }
+
+  const user = db.prepare('SELECT id, name, role FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+
+  if (userId === req.user.sub && role === 'user') {
+    return res.status(400).json({ error: 'You cannot remove your own admin access.' });
+  }
+
+  if (user.role === role) {
+    return res.json({ id: user.id, role: user.role, changed: false });
+  }
+
+  db.prepare('UPDATE users SET role = ?, updated_at = datetime(\'now\') WHERE id = ?').run(role, userId);
+
+  res.json({ id: user.id, role, changed: true });
+});
+
 export default router;

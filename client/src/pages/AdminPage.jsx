@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
 
 function heatColor(v) {
   // 0 -> pale, 100 -> strong Aviva blue/green blend
@@ -11,6 +12,7 @@ function heatColor(v) {
 }
 
 export default function AdminPage() {
+  const { user: me } = useAuth();
   const [overview, setOverview] = useState(null);
   const [distribution, setDistribution] = useState(null);
   const [heatmap, setHeatmap] = useState(null);
@@ -18,6 +20,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState(null);
   const [confirmUser, setConfirmUser] = useState(null); // user pending deletion
   const [deleting, setDeleting] = useState(false);
+  const [roleTarget, setRoleTarget] = useState(null); // { user, nextRole } pending confirmation
+  const [changingRole, setChangingRole] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -58,6 +62,26 @@ export default function AdminPage() {
       setError(e.message);
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleRoleChange() {
+    if (!roleTarget) return;
+    setChangingRole(true);
+    setNotice('');
+    try {
+      await api.adminSetUserRole(roleTarget.user.id, roleTarget.nextRole);
+      setNotice(
+        roleTarget.nextRole === 'admin'
+          ? `${roleTarget.user.name} now has admin access.`
+          : `${roleTarget.user.name}'s admin access has been removed.`
+      );
+      setRoleTarget(null);
+      loadUsers();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setChangingRole(false);
     }
   }
 
@@ -186,6 +210,18 @@ export default function AdminPage() {
                     <td className="num">{u.resultCount}</td>
                     <td className="act">
                       <button
+                        className={u.role === 'admin' ? 'btn outline sm' : 'btn sm'}
+                        disabled={u.id === me?.id}
+                        title={u.id === me?.id ? "You can't remove your own admin access." : undefined}
+                        onClick={() => {
+                          setError('');
+                          setNotice('');
+                          setRoleTarget({ user: u, nextRole: u.role === 'admin' ? 'user' : 'admin' });
+                        }}
+                      >
+                        {u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                      </button>
+                      <button
                         className="btn-danger sm"
                         disabled={!u.firstResult}
                         onClick={() => { setError(''); setNotice(''); setConfirmUser(u); }}
@@ -200,6 +236,39 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {roleTarget && (
+        <div className="modal-backdrop" onClick={() => !changingRole && setRoleTarget(null)}>
+          <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3>{roleTarget.nextRole === 'admin' ? '⚠️ Grant admin access?' : '⚠️ Remove admin access?'}</h3>
+            <p>
+              {roleTarget.nextRole === 'admin' ? (
+                <>
+                  <strong>{roleTarget.user.name}</strong> will be able to view all user data, manage
+                  every user's results, and grant or remove admin access for others.
+                </>
+              ) : (
+                <>
+                  <strong>{roleTarget.user.name}</strong> will lose access to the admin dashboard and
+                  all admin-only actions immediately, even if they're currently signed in.
+                </>
+              )}
+            </p>
+            <div className="modal-actions">
+              <button className="btn outline sm" disabled={changingRole} onClick={() => setRoleTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className={roleTarget.nextRole === 'admin' ? 'btn sm' : 'btn-danger'}
+                disabled={changingRole}
+                onClick={handleRoleChange}
+              >
+                {changingRole ? 'Saving…' : roleTarget.nextRole === 'admin' ? 'Yes, make admin' : 'Yes, remove admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmUser && (
         <div className="modal-backdrop" onClick={() => !deleting && setConfirmUser(null)}>
