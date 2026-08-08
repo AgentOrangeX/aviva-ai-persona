@@ -58,6 +58,30 @@ export const api = {
   adminUsers: () => request('/admin/users'),
   adminAnalytics: (businessArea) =>
     request(`/admin/analytics${businessArea ? `?businessArea=${encodeURIComponent(businessArea)}` : ''}`),
+  adminAuditLog: () => request('/admin/audit-log'),
+  // CSV export needs the auth header, so it can't be a plain <a href> link
+  // (the browser wouldn't attach the token) or a URL with the token in the
+  // query string (tokens shouldn't sit in browser history/server logs).
+  // Fetch it as an authenticated request and trigger a blob download instead.
+  adminExportDataset: async (dataset, filename) => {
+    const t = getToken();
+    const res = await fetch(`${API_BASE}/api/admin/export?dataset=${encodeURIComponent(dataset)}`, {
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Export failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
   adminDeleteFirstResult: (userId) =>
     request(`/admin/users/${userId}/first-result`, { method: 'DELETE' }),
   adminSetUserRole: (userId, role) =>

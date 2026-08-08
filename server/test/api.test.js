@@ -269,3 +269,52 @@ test('trust proxy is configured so client IPs behind Railway\'s reverse proxy ar
   const app = createApp();
   assert.equal(app.get('trust proxy'), 1);
 });
+
+// ---- PER-004: audit log and anonymised export --------------------------
+
+test('audit log records a role change, newest first', async () => {
+  const before = await call('/api/admin/audit-log', { token: adminToken });
+  assert.equal(before.status, 200);
+  const countBefore = before.body.entries.length;
+
+  const list = await call('/api/admin/users', { token: adminToken });
+  const target = list.body.users.find((u) => u.email === 'user@test.local');
+
+  await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'admin' }, token: adminToken });
+  await call(`/api/admin/users/${target.id}/role`, { method: 'PATCH', body: { role: 'user' }, token: adminToken });
+
+  const after = await call('/api/admin/audit-log', { token: adminToken });
+  assert.equal(after.body.entries.length, countBefore + 2);
+
+  const latest = after.body.entries[0]; // newest first
+  assert.equal(latest.action, 'role_change');
+  assert.equal(latest.targetName, target.name);
+  assert.deepEqual(latest.details, { from: 'admin', to: 'user' });
+});
+
+test('non-admin cannot read the audit log', async () => {
+  const r = await call('/api/admin/audit-log', { token: userToken });
+  assert.equal(r.status, 403);
+});
+
+test('export rejects an unknown dataset and requires admin', async () => {
+  const badDataset = await call('/api/admin/export?dataset=nope', { token: adminToken });
+  assert.equal(badDataset.status, 400);
+
+  const nonAdmin = await call('/api/admin/export?dataset=distribution', { token: userToken });
+  assert.equal(nonAdmin.status, 403);
+});
+
+test('export returns CSV for each anonymised dataset', async () => {
+  for (const dataset of ['distribution', 'heatmap', 'analytics']) {
+    const res = await fetch(base + `/api/admin/export?dataset=${dataset}`, {
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    assert.equal(res.status, 200, `${dataset} export should be 200`);
+    assert.match(res.headers.get('content-type') || '', /text\/csv/);
+    const text = await res.text();
+    assert.ok(text.split('\n').length > 1, `${dataset} export should have a header and at least one row`);
+    // never leaks a name or email — only aggregate labels/numbers
+    assert.ok(!text.includes('@test.local'), `${dataset} export must not contain an email address`);
+  }
+});

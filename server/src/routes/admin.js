@@ -5,6 +5,8 @@ import { PERSONA_KEYS } from '../lib/scoring.js';
 import { DIMS, DIM_KEYS } from '../lib/scoring.js';
 import { PERSONAS } from '../lib/personas.js';
 import { buildAnalyticsSummary } from '../lib/analytics.js';
+import { logAdminAction, listAuditLog } from '../lib/audit.js';
+import { distributionToCsv, heatmapToCsv, analyticsToCsv } from '../lib/export.js';
 
 const router = Router();
 router.use(requireAdmin);
@@ -25,7 +27,7 @@ router.get('/overview', (_req, res) => {
 });
 
 // GET /api/admin/distribution — persona counts across the latest result per user.
-router.get('/distribution', (_req, res) => {
+function buildDistribution() {
   // use each user's most recent result
   const rows = db
     .prepare(
@@ -42,7 +44,7 @@ router.get('/distribution', (_req, res) => {
   for (const r of rows) if (r.persona in counts) counts[r.persona] = r.n;
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
-  res.json({
+  return {
     total,
     distribution: PERSONA_KEYS.map((key) => ({
       key,
@@ -52,7 +54,11 @@ router.get('/distribution', (_req, res) => {
       count: counts[key],
       pct: total ? Math.round((counts[key] / total) * 100) : 0,
     })),
-  });
+  };
+}
+
+router.get('/distribution', (_req, res) => {
+  res.json(buildDistribution());
 });
 
 // GET /api/admin/analytics — usage, completion, drop-off and repeat-visit
@@ -67,7 +73,7 @@ router.get('/analytics', (req, res) => {
 });
 
 // GET /api/admin/heatmap — business area × dimension average maturity.
-router.get('/heatmap', (_req, res) => {
+function buildHeatmap() {
   const rows = db
     .prepare(
       `SELECT u.business_area area, r.dim_json
@@ -91,7 +97,11 @@ router.get('/heatmap', (_req, res) => {
     values: Object.fromEntries(DIM_KEYS.map((k) => [k, b.n ? Math.round(b.sums[k] / b.n) : 0])),
   }));
 
-  res.json({ dimensions: DIMS, areas });
+  return { dimensions: DIMS, areas };
+}
+
+router.get('/heatmap', (_req, res) => {
+  res.json(buildHeatmap());
 });
 
 // GET /api/admin/champions — ranked high-potential people.
@@ -195,6 +205,14 @@ router.delete('/users/:id/first-result', (req, res) => {
     .prepare('SELECT COUNT(*) n FROM results WHERE user_id = ?')
     .get(userId).n;
 
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'delete_first_result',
+    targetUserId: userId,
+    targetName: user.name,
+    details: { deletedResultId: first.id, remaining },
+  });
+
   res.json({ deletedResultId: first.id, remaining });
 });
 
@@ -225,7 +243,49 @@ router.patch('/users/:id/role', (req, res) => {
 
   db.prepare('UPDATE users SET role = ?, updated_at = datetime(\'now\') WHERE id = ?').run(role, userId);
 
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'role_change',
+    targetUserId: userId,
+    targetName: user.name,
+    details: { from: user.role, to: role },
+  });
+
   res.json({ id: user.id, role, changed: true });
+});
+
+// GET /api/admin/audit-log — recent admin actions (role changes, result
+// deletions), each with who did it, to whom, and when. Read-only; there is
+// deliberately no endpoint to edit or delete entries.
+router.get('/audit-log', (_req, res) => {
+  res.json({ entries: listAuditLog({ limit: 100 }) });
+});
+
+// GET /api/admin/export?dataset=distribution|heatmap|analytics — CSV export
+// of aggregate data only (PER-004: "export anonymised data"). Deliberately
+// does NOT cover /champions or /users, since those are name-identifiable —
+// this endpoint only ever serves data that was already anonymous.
+router.get('/export', (req, res) => {
+  const dataset = req.query.dataset;
+  let csv;
+  let filename;
+
+  if (dataset === 'distribution') {
+    csv = distributionToCsv(buildDistribution());
+    filename = 'persona-distribution.csv';
+  } else if (dataset === 'heatmap') {
+    csv = heatmapToCsv(buildHeatmap());
+    filename = 'maturity-heatmap.csv';
+  } else if (dataset === 'analytics') {
+    csv = analyticsToCsv(buildAnalyticsSummary({}));
+    filename = 'usage-analytics.csv';
+  } else {
+    return res.status(400).json({ error: "dataset must be 'distribution', 'heatmap', or 'analytics'." });
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(csv);
 });
 
 export default router;
