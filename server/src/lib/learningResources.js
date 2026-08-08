@@ -86,7 +86,7 @@ export function publishedResourcesForPersona(personaKey) {
        FROM learning_resources lr
        JOIN resource_personas rp ON rp.resource_id = lr.id
        WHERE rp.persona_key = ? AND lr.status = 'published'
-       ORDER BY lr.updated_at DESC`
+       ORDER BY lr.updated_at DESC, lr.id DESC`
     )
     .all(personaKey);
   return rows.map((r) => ({

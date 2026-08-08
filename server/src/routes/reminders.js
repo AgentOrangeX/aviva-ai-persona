@@ -26,7 +26,7 @@ router.get('/status', (req, res) => {
   if (!user.reminders_enabled) return res.json({ due: false });
 
   const latest = db
-    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(req.user.sub);
   if (!latest) return res.json({ due: false }); // nothing to remind them about yet
 

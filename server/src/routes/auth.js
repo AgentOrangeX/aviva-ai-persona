@@ -31,7 +31,7 @@ function accountStats(userId) {
   const u = db.prepare('SELECT created_at FROM users WHERE id = ?').get(userId);
   const count = db.prepare('SELECT COUNT(*) n FROM results WHERE user_id = ?').get(userId).n;
   const latest = db
-    .prepare('SELECT persona, created_at FROM results WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .prepare('SELECT persona, created_at FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(userId);
   return {
     joinedAt: u?.created_at || null,

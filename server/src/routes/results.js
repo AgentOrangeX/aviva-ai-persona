@@ -113,7 +113,7 @@ function rowToResult(r) {
 // GET /api/results/mine — current user's saved results, newest first.
 router.get('/mine', requireAuth, (req, res) => {
   const rows = db
-    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC')
+    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC')
     .all(req.user.sub);
   res.json({ results: rows.map(rowToResult) });
 });
