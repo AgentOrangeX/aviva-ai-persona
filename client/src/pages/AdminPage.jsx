@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import LearningContentPanel from '../components/LearningContentPanel.jsx';
+import { AdminBtn } from '../components/AdminBtn.jsx';
+import { ShieldPlus, ShieldMinus, Trash2, Download } from 'lucide-react';
 
 function heatColor(v) {
   // 0 -> pale, 100 -> strong Aviva blue/green blend
@@ -154,9 +156,9 @@ export default function AdminPage() {
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <h3>📊 Usage &amp; drop-off</h3>
-          <button className="btn outline sm" disabled={exporting === 'analytics'} onClick={() => handleExport('analytics', 'usage-analytics.csv')}>
+          <AdminBtn variant="secondary" icon={Download} disabled={exporting === 'analytics'} onClick={() => handleExport('analytics', 'usage-analytics.csv')}>
             {exporting === 'analytics' ? 'Exporting…' : 'Export CSV'}
-          </button>
+          </AdminBtn>
         </div>
         <p className="admin-note">
           Quiz starts, completions and where people leave, tracked anonymously by browser —
@@ -236,9 +238,9 @@ export default function AdminPage() {
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <h3>Persona distribution</h3>
-          <button className="btn outline sm" disabled={exporting === 'distribution'} onClick={() => handleExport('distribution', 'persona-distribution.csv')}>
+          <AdminBtn variant="secondary" icon={Download} disabled={exporting === 'distribution'} onClick={() => handleExport('distribution', 'persona-distribution.csv')}>
             {exporting === 'distribution' ? 'Exporting…' : 'Export CSV'}
-          </button>
+          </AdminBtn>
         </div>
         {distribution.total === 0 ? (
           <p style={{ color: 'var(--ink-soft)' }}>No completed assessments yet.</p>
@@ -256,9 +258,9 @@ export default function AdminPage() {
       <div className="panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <h3>AI maturity by business area</h3>
-          <button className="btn outline sm" disabled={exporting === 'heatmap'} onClick={() => handleExport('heatmap', 'maturity-heatmap.csv')}>
+          <AdminBtn variant="secondary" icon={Download} disabled={exporting === 'heatmap'} onClick={() => handleExport('heatmap', 'maturity-heatmap.csv')}>
             {exporting === 'heatmap' ? 'Exporting…' : 'Export CSV'}
-          </button>
+          </AdminBtn>
         </div>
         <p className="admin-note">
           Average dimension scores (0–100) for each business area, across all saved results.
@@ -348,25 +350,29 @@ export default function AdminPage() {
                     </td>
                     <td className="num">{u.resultCount}</td>
                     <td className="act">
-                      <button
-                        className={u.role === 'admin' ? 'btn outline sm' : 'btn sm'}
-                        disabled={u.id === me?.id}
-                        title={u.id === me?.id ? "You can't remove your own admin access." : undefined}
-                        onClick={() => {
-                          setError('');
-                          setNotice('');
-                          setRoleTarget({ user: u, nextRole: u.role === 'admin' ? 'user' : 'admin' });
-                        }}
-                      >
-                        {u.role === 'admin' ? 'Remove admin' : 'Make admin'}
-                      </button>
-                      <button
-                        className="btn-danger sm"
-                        disabled={!u.firstResult}
-                        onClick={() => { setError(''); setNotice(''); setConfirmUser(u); }}
-                      >
-                        Delete first result
-                      </button>
+                      <div className="admin-actions">
+                        <AdminBtn
+                          variant="secondary"
+                          icon={u.role === 'admin' ? ShieldMinus : ShieldPlus}
+                          disabled={u.id === me?.id}
+                          title={u.id === me?.id ? "You can't remove your own admin access." : undefined}
+                          onClick={() => {
+                            setError('');
+                            setNotice('');
+                            setRoleTarget({ user: u, nextRole: u.role === 'admin' ? 'user' : 'admin' });
+                          }}
+                        >
+                          {u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                        </AdminBtn>
+                        <AdminBtn
+                          variant="danger-outline"
+                          icon={Trash2}
+                          disabled={!u.firstResult}
+                          onClick={() => { setError(''); setNotice(''); setConfirmUser(u); }}
+                        >
+                          Delete first result
+                        </AdminBtn>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -430,16 +436,17 @@ export default function AdminPage() {
               )}
             </p>
             <div className="modal-actions">
-              <button className="btn outline sm" disabled={changingRole} onClick={() => setRoleTarget(null)}>
+              <AdminBtn variant="secondary" disabled={changingRole} onClick={() => setRoleTarget(null)}>
                 Cancel
-              </button>
-              <button
-                className={roleTarget.nextRole === 'admin' ? 'btn sm' : 'btn-danger'}
+              </AdminBtn>
+              <AdminBtn
+                variant={roleTarget.nextRole === 'admin' ? 'primary' : 'danger'}
+                icon={roleTarget.nextRole === 'admin' ? ShieldPlus : ShieldMinus}
                 disabled={changingRole}
                 onClick={handleRoleChange}
               >
                 {changingRole ? 'Saving…' : roleTarget.nextRole === 'admin' ? 'Yes, make admin' : 'Yes, remove admin'}
-              </button>
+              </AdminBtn>
             </div>
           </div>
         </div>
@@ -464,12 +471,12 @@ export default function AdminPage() {
                 : ' They have no other results, so they will drop off the leaderboard until they retake the assessment.'}
             </p>
             <div className="modal-actions">
-              <button className="btn outline sm" disabled={deleting} onClick={() => setConfirmUser(null)}>
+              <AdminBtn variant="secondary" disabled={deleting} onClick={() => setConfirmUser(null)}>
                 Cancel
-              </button>
-              <button className="btn-danger" disabled={deleting} onClick={handleDelete}>
+              </AdminBtn>
+              <AdminBtn variant="danger-outline" icon={Trash2} disabled={deleting} onClick={handleDelete}>
                 {deleting ? 'Deleting…' : 'Yes, delete it'}
-              </button>
+              </AdminBtn>
             </div>
           </div>
         </div>
