@@ -4,6 +4,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { PERSONA_KEYS } from '../lib/scoring.js';
 import { DIMS, DIM_KEYS } from '../lib/scoring.js';
 import { PERSONAS } from '../lib/personas.js';
+import { buildAnalyticsSummary } from '../lib/analytics.js';
 
 const router = Router();
 router.use(requireAdmin);
@@ -52,6 +53,17 @@ router.get('/distribution', (_req, res) => {
       pct: total ? Math.round((counts[key] / total) * 100) : 0,
     })),
   });
+});
+
+// GET /api/admin/analytics — usage, completion, drop-off and repeat-visit
+// stats for PER-003. ?businessArea=<name> scopes the headline numbers to
+// one area; the per-area breakdown table is always org-wide and suppresses
+// any area with fewer than MIN_COHORT_SIZE attempts.
+router.get('/analytics', (req, res) => {
+  const areaFilter = typeof req.query.businessArea === 'string' && req.query.businessArea.trim()
+    ? req.query.businessArea.trim()
+    : null;
+  res.json(buildAnalyticsSummary({ areaFilter }));
 });
 
 // GET /api/admin/heatmap — business area × dimension average maturity.

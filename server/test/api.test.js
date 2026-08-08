@@ -178,3 +178,84 @@ test('unknown user id returns 404', async () => {
   const r = await call('/api/admin/users/999999/role', { method: 'PATCH', body: { role: 'admin' }, token: adminToken });
   assert.equal(r.status, 404);
 });
+
+// ---- PER-003: usage analytics ----------------------------------------
+
+test('analytics event validates its inputs', async () => {
+  const missingVisitor = await call('/api/analytics/event', {
+    method: 'POST',
+    body: { attemptId: 'a1', eventType: 'start' },
+  });
+  assert.equal(missingVisitor.status, 400);
+
+  const badType = await call('/api/analytics/event', {
+    method: 'POST',
+    body: { visitorId: 'v1', attemptId: 'a1', eventType: 'nope' },
+  });
+  assert.equal(badType.status, 400);
+
+  const stepWithoutIndex = await call('/api/analytics/event', {
+    method: 'POST',
+    body: { visitorId: 'v1', attemptId: 'a1', eventType: 'step' },
+  });
+  assert.equal(stepWithoutIndex.status, 400);
+
+  const ok = await call('/api/analytics/event', {
+    method: 'POST',
+    body: { visitorId: 'v1', attemptId: 'a1', eventType: 'start' },
+  });
+  assert.equal(ok.status, 201);
+});
+
+test('non-admin and anonymous cannot read the analytics dashboard', async () => {
+  const asUser = await call('/api/admin/analytics', { token: userToken });
+  assert.equal(asUser.status, 403);
+  const anon = await call('/api/admin/analytics');
+  assert.equal(anon.status, 401);
+});
+
+test('analytics dashboard tallies starts, completions, drop-off and repeat visits', async () => {
+  // attempt A: logged-in user (business_area 'Claims'), starts, answers 2 of 28
+  // questions, then abandons — should land in the earliest drop-off bucket.
+  await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A1', eventType: 'start' } });
+  await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A1', eventType: 'step', questionIndex: 0 } });
+  await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A1', eventType: 'step', questionIndex: 1 } });
+
+  // same visitor comes back later and finishes — makes visitor-A a repeat visitor.
+  await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A2', eventType: 'start' } });
+  for (let i = 0; i < 28; i++) {
+    await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A2', eventType: 'step', questionIndex: i } });
+  }
+  await call('/api/analytics/event', { method: 'POST', token: userToken, body: { visitorId: 'visitor-A', attemptId: 'attempt-A2', eventType: 'complete' } });
+
+  // anonymous visitor starts and never answers a single question.
+  await call('/api/analytics/event', { method: 'POST', body: { visitorId: 'visitor-B', attemptId: 'attempt-B1', eventType: 'start' } });
+
+  const r = await call('/api/admin/analytics', { token: adminToken });
+  assert.equal(r.status, 200);
+
+  // 3 attempts total across the two visitors (attempt-A1, attempt-A2, attempt-B1),
+  // plus the earlier single-event 'a1' attempt from the validation test above.
+  assert.ok(r.body.starts >= 4);
+  assert.ok(r.body.completions >= 1);
+  assert.ok(r.body.repeatVisitors >= 1, 'visitor-A should count as a repeat visitor');
+
+  const noneBucket = r.body.dropOff.find((d) => d.key === 'none');
+  assert.ok(noneBucket.count >= 1, 'visitor-B abandoned before answering anything');
+  const q1Bucket = r.body.dropOff.find((d) => d.key === 'q1');
+  assert.ok(q1Bucket.count >= 1, 'visitor-A abandoned in the first quarter of questions on attempt-A1');
+
+  const claims = r.body.areas.find((a) => a.area === 'Claims');
+  assert.ok(claims, 'Claims area should appear in the breakdown');
+  assert.equal(claims.suppressed, true, 'fewer than 5 attempts should be suppressed for privacy');
+  assert.equal(claims.completions, null);
+});
+
+test('area filter scopes the headline stats', async () => {
+  const claimsOnly = await call('/api/admin/analytics?businessArea=Claims', { token: adminToken });
+  assert.equal(claimsOnly.status, 200);
+  // both attempt-A1 and attempt-A2 were made by the 'Claims' user; the
+  // stray anonymous/global events from other tests should be excluded.
+  assert.equal(claimsOnly.body.starts, 2);
+  assert.equal(claimsOnly.body.completions, 1);
+});

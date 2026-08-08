@@ -31,3 +31,23 @@ CREATE TABLE IF NOT EXISTS results (
 
 CREATE INDEX IF NOT EXISTS idx_results_user ON results(user_id);
 CREATE INDEX IF NOT EXISTS idx_results_persona ON results(persona);
+
+-- Anonymous usage events for the analytics dashboard (PER-003). No PII is
+-- stored: visitor_id is a random id generated client-side and held in
+-- localStorage, not tied to a real identity even when user_id is present.
+-- attempt_id scopes one run through the quiz, letting us tell "started but
+-- never came back" apart from "started a fresh attempt later".
+CREATE TABLE IF NOT EXISTS quiz_events (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  visitor_id     TEXT    NOT NULL,
+  attempt_id     TEXT    NOT NULL,
+  user_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  business_area  TEXT,                     -- snapshot at event time; NULL for anonymous users
+  event_type     TEXT    NOT NULL,          -- 'start' | 'step' | 'complete'
+  question_index INTEGER,                  -- for 'step': 0-based index of the question just answered
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_events_attempt ON quiz_events(attempt_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_events_visitor ON quiz_events(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_events_type ON quiz_events(event_type);
