@@ -1,25 +1,13 @@
 import { Router } from 'express';
 import db from '../db/index.js';
 import { QUESTIONS } from '../lib/questions.js';
-import { scoreAnswers, DIM_KEYS } from '../lib/scoring.js';
+import { scoreAnswers } from '../lib/scoring.js';
 import { PERSONAS } from '../lib/personas.js';
 import { requireAuth } from '../middleware/auth.js';
 import { publishedResourcesForPersona } from '../lib/learningResources.js';
+import { deriveAchievements, achievementProgress } from '../lib/achievements.js';
 
 const router = Router();
-
-/** Server-side achievement derivation so they cannot be spoofed by the client. */
-function deriveAchievements(scored) {
-  const dp = scored.dimPct;
-  const out = ['finisher'];
-  if (scored.rare) out.push('rare');
-  if (DIM_KEYS.filter((k) => dp[k] >= 70).length >= 3) out.push('balanced');
-  if (dp.curiosity >= 90) out.push('curious');
-  const top = [...DIM_KEYS].sort((a, b) => dp[b] - dp[a])[0];
-  if (top === 'customer') out.push('customer');
-  if (scored.champ >= 55) out.push('champion');
-  return out;
-}
 
 function validateAnswers(answers) {
   if (!Array.isArray(answers)) return 'Answers must be an array.';
@@ -51,6 +39,10 @@ function enrich(scored, achievements) {
     rare: scored.rare,
     champScore: scored.champ,
     achievements,
+    // Full catalogue with published criteria + progress toward each locked
+    // one (PER-007) — the client no longer needs its own copy of the
+    // thresholds, so there's exactly one place these can drift from reality.
+    achievementProgress: achievementProgress(scored),
     // Admin-curated additions (PER-034) — separate from the static
     // `persona.journey` content above, which stays hand-authored in code.
     // This can change without a deploy, so we look it up fresh every time

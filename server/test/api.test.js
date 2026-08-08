@@ -483,3 +483,60 @@ test('progress is isolated per user', async () => {
   // clean up so later tests in this file see a known state
   await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 0 } });
 });
+
+// ---- PER-007: achievement badges & milestones ---------------------------
+
+test('every result includes published criteria and progress for every achievement, not just earned ones', async () => {
+  const r = await call('/api/results/score', { method: 'POST', body: { answers: fullAnswers } });
+  assert.equal(r.status, 200);
+  const list = r.body.result.achievementProgress;
+  assert.ok(Array.isArray(list) && list.length >= 6);
+
+  for (const a of list) {
+    assert.equal(typeof a.criteria, 'string');
+    assert.ok(a.criteria.length > 0, 'criteria must be published (non-empty) even when locked');
+    assert.equal(typeof a.unlocked, 'boolean');
+    assert.equal(typeof a.progress, 'number');
+    assert.ok(a.progress >= 0 && a.progress <= 100);
+    if (a.unlocked) assert.equal(a.progress, 100);
+  }
+
+  // achievements earned should exactly match the unlocked keys in the catalogue
+  const unlockedKeys = list.filter((a) => a.unlocked).map((a) => a.key).sort();
+  assert.deepEqual(unlockedKeys, [...r.body.result.achievements].sort());
+});
+
+test('a locked achievement never reports 100% progress', async () => {
+  const r = await call('/api/results/score', { method: 'POST', body: { answers: fullAnswers } });
+  const locked = r.body.result.achievementProgress.filter((a) => !a.unlocked);
+  for (const a of locked) assert.ok(a.progress < 100, `${a.key} is locked but reports 100% progress`);
+});
+
+test('achievement sharing preference defaults off and can be toggled via profile', async () => {
+  const me = await call('/api/auth/me', { token: userToken });
+  assert.equal(me.body.user.shareAchievements, false);
+
+  const on = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: true } });
+  assert.equal(on.status, 200);
+  assert.equal(on.body.user.shareAchievements, true);
+
+  const confirm = await call('/api/auth/me', { token: userToken });
+  assert.equal(confirm.body.user.shareAchievements, true);
+
+  const off = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: false } });
+  assert.equal(off.body.user.shareAchievements, false);
+});
+
+test('shareAchievements rejects a non-boolean value', async () => {
+  const r = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: 'yes' } });
+  assert.equal(r.status, 400);
+});
+
+test('updating unrelated profile fields does not reset the sharing preference', async () => {
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: true } });
+  const r = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { jobTitle: 'Senior Analyst' } });
+  assert.equal(r.body.user.shareAchievements, true, 'omitting the field should leave it unchanged, not reset it');
+
+  // reset for isolation from any later tests
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: false } });
+});

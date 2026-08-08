@@ -163,7 +163,7 @@ input,select{font-family:inherit;font-size:1rem}
 .ach-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
 .ach{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--r-sm);background:#fff;border:1.5px solid var(--line);min-width:200px}
 .ach .em{font-size:1.7rem;flex:none}
-.ach.locked{opacity:.45;filter:grayscale(.6)}
+.ach.locked{opacity:.75;filter:grayscale(.35)}
 .ach b{display:block;font-size:.9rem;font-weight:800}
 .ach span{font-size:.74rem;color:var(--ink-soft)}
 .result-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:36px 0 60px}
