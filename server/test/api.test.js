@@ -318,3 +318,110 @@ test('export returns CSV for each anonymised dataset', async () => {
     assert.ok(!text.includes('@test.local'), `${dataset} export must not contain an email address`);
   }
 });
+
+// ---- PER-034: learning content administration --------------------------
+
+test('non-admin cannot manage learning resources', async () => {
+  const r = await call('/api/admin/learning-resources', {
+    method: 'POST',
+    token: userToken,
+    body: { title: 'x', type: 'link', url: 'https://example.com', personaKeys: ['explorer'] },
+  });
+  assert.equal(r.status, 403);
+});
+
+test('creating a resource validates every field', async () => {
+  const cases = [
+    { body: { type: 'link', url: 'https://x.com', personaKeys: ['explorer'] }, why: 'missing title' },
+    { body: { title: 't', type: 'nope', url: 'https://x.com', personaKeys: ['explorer'] }, why: 'bad type' },
+    { body: { title: 't', type: 'link', url: 'not-a-url', personaKeys: ['explorer'] }, why: 'bad url' },
+    { body: { title: 't', type: 'link', url: 'https://x.com', personaKeys: [] }, why: 'empty personas' },
+    { body: { title: 't', type: 'link', url: 'https://x.com', personaKeys: ['not-a-persona'] }, why: 'invalid persona key' },
+  ];
+  for (const c of cases) {
+    const r = await call('/api/admin/learning-resources', { method: 'POST', token: adminToken, body: c.body });
+    assert.equal(r.status, 400, `should reject: ${c.why}`);
+  }
+});
+
+test('a new resource is created as a draft and is not yet published anywhere', async () => {
+  const r = await call('/api/admin/learning-resources', {
+    method: 'POST',
+    token: adminToken,
+    body: { title: 'Prompting basics', description: 'Quick primer', type: 'video', url: 'https://example.com/video', personaKeys: ['explorer', 'builder'] },
+  });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.resource.status, 'draft');
+  assert.deepEqual(r.body.resource.personas, ['builder', 'explorer']); // stored order-independent, returned sorted
+
+  const list = await call('/api/admin/learning-resources', { token: adminToken });
+  assert.ok(list.body.resources.some((x) => x.id === r.body.resource.id));
+});
+
+test('publishing, editing, archiving and deleting a resource all log to the audit trail', async () => {
+  const create = await call('/api/admin/learning-resources', {
+    method: 'POST',
+    token: adminToken,
+    body: { title: 'Audit target', type: 'link', url: 'https://example.com/a', personaKeys: ['optimiser'] },
+  });
+  const id = create.body.resource.id;
+
+  const publish = await call(`/api/admin/learning-resources/${id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'published' } });
+  assert.equal(publish.status, 200);
+  assert.equal(publish.body.resource.status, 'published');
+
+  const edit = await call(`/api/admin/learning-resources/${id}`, {
+    method: 'PATCH', token: adminToken,
+    body: { title: 'Audit target (edited)', type: 'link', url: 'https://example.com/a', personaKeys: ['optimiser'] },
+  });
+  assert.equal(edit.status, 200);
+  assert.equal(edit.body.resource.title, 'Audit target (edited)');
+  // editing content is not a status endpoint, so status should be untouched
+  assert.equal(edit.body.resource.status, 'published');
+
+  const archive = await call(`/api/admin/learning-resources/${id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'archived' } });
+  assert.equal(archive.status, 200);
+
+  const del = await call(`/api/admin/learning-resources/${id}`, { method: 'DELETE', token: adminToken });
+  assert.equal(del.status, 200);
+
+  const audit = await call('/api/admin/audit-log', { token: adminToken });
+  const actions = audit.body.entries.filter((e) => e.targetName === 'Audit target' || e.targetName === 'Audit target (edited)').map((e) => e.action);
+  assert.ok(actions.includes('resource_create'));
+  assert.ok(actions.includes('resource_status_change'));
+  assert.ok(actions.includes('resource_update'));
+  assert.ok(actions.includes('resource_delete'));
+});
+
+test('only published resources assigned to the matched persona appear in a result', async () => {
+  // Find out which persona a full set of "always pick option 0" answers wins,
+  // using the same scoring the app uses, so this test is deterministic
+  // regardless of how the scoring weights are tuned.
+  const preview = await call('/api/results/score', { method: 'POST', body: { answers: fullAnswers } });
+  const winner = preview.body.result.persona.key;
+  const other = winner === 'explorer' ? 'builder' : 'explorer';
+
+  const published = await call('/api/admin/learning-resources', {
+    method: 'POST', token: adminToken,
+    body: { title: 'Winner resource', type: 'link', url: 'https://example.com/winner', personaKeys: [winner] },
+  });
+  await call(`/api/admin/learning-resources/${published.body.resource.id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'published' } });
+
+  const draftForWinner = await call('/api/admin/learning-resources', {
+    method: 'POST', token: adminToken,
+    body: { title: 'Still a draft', type: 'link', url: 'https://example.com/draft', personaKeys: [winner] },
+  });
+
+  const publishedForOther = await call('/api/admin/learning-resources', {
+    method: 'POST', token: adminToken,
+    body: { title: 'Wrong persona', type: 'link', url: 'https://example.com/other', personaKeys: [other] },
+  });
+  await call(`/api/admin/learning-resources/${publishedForOther.body.resource.id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'published' } });
+
+  const result = await call('/api/results/score', { method: 'POST', body: { answers: fullAnswers } });
+  const titles = result.body.result.learningResources.map((r) => r.title);
+
+  assert.ok(titles.includes('Winner resource'), 'published resource for the matched persona should appear');
+  assert.ok(!titles.includes('Still a draft'), 'draft resources should never appear to users');
+  assert.ok(!titles.includes('Wrong persona'), "resources for a persona the user didn't match should not appear");
+});

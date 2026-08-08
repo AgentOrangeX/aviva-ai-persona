@@ -4,6 +4,7 @@ import { QUESTIONS } from '../lib/questions.js';
 import { scoreAnswers, DIM_KEYS } from '../lib/scoring.js';
 import { PERSONAS } from '../lib/personas.js';
 import { requireAuth } from '../middleware/auth.js';
+import { publishedResourcesForPersona } from '../lib/learningResources.js';
 
 const router = Router();
 
@@ -50,6 +51,11 @@ function enrich(scored, achievements) {
     rare: scored.rare,
     champScore: scored.champ,
     achievements,
+    // Admin-curated additions (PER-034) — separate from the static
+    // `persona.journey` content above, which stays hand-authored in code.
+    // This can change without a deploy, so we look it up fresh every time
+    // rather than baking it into the PERSONAS object.
+    learningResources: publishedResourcesForPersona(scored.winner),
   };
 }
 

@@ -68,3 +68,30 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON admin_audit_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_log_admin ON admin_audit_log(admin_user_id);
+
+-- Admin-managed learning content (PER-034). This is deliberately separate
+-- from the hand-curated `journey` steps baked into lib/personas.js — those
+-- stay as-is; resources here are additional, timely content the Learning
+-- Team can push live without a code deploy, surfaced alongside the
+-- existing journey once published.
+CREATE TABLE IF NOT EXISTS learning_resources (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  title        TEXT    NOT NULL,
+  description  TEXT,
+  type         TEXT    NOT NULL,             -- 'document' | 'video' | 'link' | 'platform_url'
+  url          TEXT    NOT NULL,
+  status       TEXT    NOT NULL DEFAULT 'draft', -- 'draft' | 'published' | 'archived'
+  created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Many-to-many: a resource can target more than one persona.
+CREATE TABLE IF NOT EXISTS resource_personas (
+  resource_id  INTEGER NOT NULL REFERENCES learning_resources(id) ON DELETE CASCADE,
+  persona_key  TEXT    NOT NULL,
+  PRIMARY KEY (resource_id, persona_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_learning_resources_status ON learning_resources(status);
+CREATE INDEX IF NOT EXISTS idx_resource_personas_persona ON resource_personas(persona_key);

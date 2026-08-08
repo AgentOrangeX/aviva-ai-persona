@@ -139,6 +139,28 @@ export default function ResultPage() {
           </div>
         </div>
 
+        {result.learningResources && result.learningResources.length > 0 && (
+          <div className="panel journey">
+            <h3><span className="ic" style={{ background: c[1] }}>📚</span> From your Learning Team</h3>
+            <p className="section-note">Recently published, in addition to your core learning journey above.</p>
+            <div className="steps">
+              {result.learningResources.map((r) => (
+                <div className="step" key={r.id}>
+                  <span className="num" style={{ background: c[0] }}>+</span>
+                  <div className="body">
+                    <b>
+                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="step-link">
+                        {r.title} <span className="step-ext" aria-hidden="true">↗</span>
+                      </a>
+                    </b>
+                    {r.description && <p>{r.description}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid2">
           <div className="panel">
             <h3><span className="ic" style={{ background: c[0] }}>◎</span> Career directions</h3>
