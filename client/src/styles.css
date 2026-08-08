@@ -160,8 +160,8 @@ input,select{font-family:inherit;font-size:1rem}
 .career .role{padding:16px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:#fff}
 .career .role b{display:block;font-size:.98rem;font-weight:800;margin-bottom:3px}
 .career .role span{font-size:.82rem;color:var(--ink-soft)}
-.ach-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
-.ach{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--r-sm);background:#fff;border:1.5px solid var(--line);min-width:200px}
+.ach-grid{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.ach{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-radius:var(--r-sm);background:#fff;border:1.5px solid var(--line)}
 .ach .em{font-size:1.7rem;flex:none}
 .ach.locked{opacity:.75;filter:grayscale(.35)}
 .ach b{display:block;font-size:.9rem;font-weight:800}

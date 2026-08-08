@@ -253,7 +253,7 @@ export default function ResultPage() {
             {achievementList.map((a) => (
               <div className={`ach ${a.unlocked ? '' : 'locked'}`} key={a.key}>
                 <span className="em">{a.emoji}</span>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <b>{a.name}</b>
                   <span>{a.criteria}</span>
                   {!a.unlocked && (
