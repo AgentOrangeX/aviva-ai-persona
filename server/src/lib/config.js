@@ -16,6 +16,15 @@ export const config = {
   jwtSecret: required('JWT_SECRET', process.env.NODE_ENV === 'production' ? undefined : 'dev-only-insecure-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  // Railway (and most PaaS hosts) put exactly one reverse proxy in front of
+  // the app, which sets X-Forwarded-For on every request. Express needs to
+  // be told to trust that one hop, or anything relying on the client's real
+  // IP (rate limiting here) throws/misbehaves. Trusting "1" hop is the
+  // minimal setting — it does NOT let a client spoof its own IP by sending
+  // its own X-Forwarded-For, since Express only reads the value the proxy
+  // itself appended. Override with TRUST_PROXY if the topology changes
+  // (e.g. an extra CDN hop in front of Railway would need "2").
+  trustProxy: process.env.TRUST_PROXY !== undefined ? Number(process.env.TRUST_PROXY) : 1,
   admin: {
     email: process.env.ADMIN_EMAIL || '',
     password: process.env.ADMIN_PASSWORD || '',
