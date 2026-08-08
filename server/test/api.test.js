@@ -857,3 +857,59 @@ test('profile update persists businessFunction and omitting it does not reset it
   assert.equal(confirm.body.user.businessArea, 'Data & AI');
   assert.equal(confirm.body.user.businessFunction, 'Data Science');
 });
+
+// ---- Business area / function leaderboards --------------------------------
+
+test('groups endpoint never surfaces a business area or function below the cohort threshold', async () => {
+  // adminToken's account has no business_area set by default in this suite,
+  // and only a couple of users exist with any specific area — well under
+  // the threshold of 5 — so none should appear yet.
+  const r = await call('/api/results/leaderboard/groups', { token: userToken });
+  assert.equal(r.status, 200);
+  assert.ok(Array.isArray(r.body.areas));
+  assert.equal(r.body.minCohortSize, 5);
+  assert.ok(!r.body.areas.includes('Data & AI'), 'a lone test user in an area should not surface it as a valid filter yet');
+});
+
+test('a filtered leaderboard below the cohort threshold is suppressed, including the "me" section', async () => {
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { businessArea: 'Data & AI', businessFunction: 'Data Science' } });
+
+  const r = await call(`/api/results/leaderboard?businessArea=${encodeURIComponent('Data & AI')}`, { token: userToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.suppressed, true);
+  assert.equal(r.body.cohortSize, 1);
+  assert.equal(r.body.leaderboard, undefined, 'a suppressed response must not include named entries');
+  assert.equal(r.body.me, undefined, "a suppressed response must not reveal even the requester's own rank, since that can reveal others' scores by elimination in a tiny group");
+});
+
+test('a filtered leaderboard reaching the cohort threshold shows named entries scoped to that group only', async () => {
+  // bring the 'Data & AI' / 'Data Science' cohort up to the threshold with
+  // fresh users, distinct from anyone in the 'Claims' group below
+  const emails = [];
+  for (let i = 0; i < 4; i++) {
+    const email = `daai_${Date.now()}_${i}@test.local`;
+    emails.push(email);
+    const reg = await call('/api/auth/register', {
+      method: 'POST',
+      body: { email, password: 'password123', name: `DataAI User ${i}`, businessArea: 'Data & AI', businessFunction: 'Data Science' },
+    });
+    await call('/api/results', { method: 'POST', token: reg.body.token, body: { answers: fullAnswers } });
+  }
+  // plus the userToken account from the previous test, already in this group = 5 total
+
+  const groups = await call('/api/results/leaderboard/groups', { token: userToken });
+  assert.ok(groups.body.areas.includes('Data & AI'), 'the area should now appear once it clears the threshold');
+  assert.ok((groups.body.functionsByArea['Data & AI'] || []).includes('Data Science'));
+
+  const filtered = await call(`/api/results/leaderboard?businessArea=${encodeURIComponent('Data & AI')}&businessFunction=${encodeURIComponent('Data Science')}`, { token: userToken });
+  assert.equal(filtered.status, 200);
+  assert.equal(filtered.body.suppressed, false);
+  assert.ok(filtered.body.leaderboard.length >= 5);
+  assert.ok(filtered.body.leaderboard.every((row) => row.name.startsWith('DataAI User') || row.isMe));
+});
+
+test('an unfiltered leaderboard request is never suppressed, regardless of cohort size', async () => {
+  const r = await call('/api/results/leaderboard', { token: userToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.suppressed, false);
+});
