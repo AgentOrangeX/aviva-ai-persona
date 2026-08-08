@@ -17,7 +17,10 @@ export default function ProfilePage() {
   const { user, applyProfileUpdate } = useAuth();
   const toast = useToast();
 
-  const [form, setForm] = useState({ name: '', email: '', jobTitle: '', businessArea: '', shareAchievements: false });
+  const [form, setForm] = useState({
+    name: '', email: '', jobTitle: '', businessArea: '',
+    shareAchievements: false, remindersEnabled: false, reminderFrequency: 'weekly',
+  });
   const [stats, setStats] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
@@ -35,6 +38,8 @@ export default function ProfilePage() {
         jobTitle: user.jobTitle || '',
         businessArea: user.businessArea || '',
         shareAchievements: !!user.shareAchievements,
+        remindersEnabled: !!user.remindersEnabled,
+        reminderFrequency: user.reminderFrequency || 'weekly',
       });
       setStats(stats);
     }).catch((e) => setProfileError(e.message));
@@ -55,6 +60,8 @@ export default function ProfilePage() {
         jobTitle: form.jobTitle,
         businessArea: form.businessArea,
         shareAchievements: form.shareAchievements,
+        remindersEnabled: form.remindersEnabled,
+        reminderFrequency: form.reminderFrequency,
       });
       applyProfileUpdate(res);
       if (res.stats) setStats(res.stats);
@@ -144,6 +151,37 @@ export default function ProfilePage() {
             </span>
           </label>
         </div>
+        <div className="field">
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontWeight: 500 }}>
+            <input
+              type="checkbox"
+              checked={form.remindersEnabled}
+              onChange={(e) => setForm({ ...form, remindersEnabled: e.target.checked })}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              Remind me about unfinished learning steps.
+              <br />
+              <span style={{ color: 'var(--ink-soft)', fontWeight: 400, fontSize: '.85rem' }}>
+                Off by default. Shown as a banner in the app when you're active — not an email.
+              </span>
+            </span>
+          </label>
+        </div>
+        {form.remindersEnabled && (
+          <div className="field" style={{ marginLeft: 28, maxWidth: 260 }}>
+            <label htmlFor="reminderFrequency">How often</label>
+            <select
+              id="reminderFrequency"
+              value={form.reminderFrequency}
+              onChange={(e) => setForm({ ...form, reminderFrequency: e.target.value })}
+            >
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+        )}
         <button className="btn" onClick={saveProfile} disabled={savingProfile}>
           {savingProfile ? 'Saving…' : 'Save changes'}
         </button>

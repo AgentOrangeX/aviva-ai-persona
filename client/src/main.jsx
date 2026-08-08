@@ -10,6 +10,8 @@ import IntroPage from './pages/IntroPage.jsx';
 import PersonasPage from './pages/PersonasPage.jsx';
 import QuizPage from './pages/QuizPage.jsx';
 import ResultPage from './pages/ResultPage.jsx';
+import ResultByIdPage from './pages/ResultByIdPage.jsx';
+import ReminderBanner from './components/ReminderBanner.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import MyResultsPage from './pages/MyResultsPage.jsx';
@@ -24,12 +26,14 @@ function App() {
       <ToastProvider>
         <div className="aurora" aria-hidden="true" />
         <TopBar />
+        <ReminderBanner />
         <main>
           <Routes>
             <Route path="/" element={<IntroPage />} />
             <Route path="/personas" element={<PersonasPage />} />
             <Route path="/quiz" element={<QuizPage />} />
             <Route path="/result" element={<ProtectedRoute><ResultPage /></ProtectedRoute>} />
+            <Route path="/result/:id" element={<ProtectedRoute><ResultByIdPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/my-results" element={<ProtectedRoute><MyResultsPage /></ProtectedRoute>} />

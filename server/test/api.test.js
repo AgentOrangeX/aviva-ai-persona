@@ -540,3 +540,99 @@ test('updating unrelated profile fields does not reset the sharing preference', 
   // reset for isolation from any later tests
   await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { shareAchievements: false } });
 });
+
+// ---- Leaderboard route (previously untested — the literal route this
+// session's /:id-ordering bug would have silently broken) --------------
+
+test('leaderboard is reachable and returns ranked entries with a "me" section', async () => {
+  const r = await call('/api/results/leaderboard', { token: userToken });
+  assert.equal(r.status, 200);
+  assert.ok(Array.isArray(r.body.leaderboard));
+  assert.equal(typeof r.body.totalRanked, 'number');
+  // the user has saved results earlier in this suite, so they should have a rank
+  assert.ok(r.body.me, 'requesting user should have their own standing returned');
+});
+
+test('leaderboard requires auth', async () => {
+  const r = await call('/api/results/leaderboard');
+  assert.equal(r.status, 401);
+});
+
+// ---- GET /api/results/:id ------------------------------------------------
+
+test("a user can fetch their own result by id, but not another user's", async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  assert.equal(saved.status, 201);
+  const id = saved.body.resultId;
+
+  const mine = await call(`/api/results/${id}`, { token: userToken });
+  assert.equal(mine.status, 200);
+  assert.equal(mine.body.result.id, id);
+
+  const asAdmin = await call(`/api/results/${id}`, { token: adminToken });
+  assert.equal(asAdmin.status, 404, "another user's result id should 404, not reveal it exists");
+});
+
+test('fetching an unknown or invalid result id 404s / 400s appropriately', async () => {
+  const unknown = await call('/api/results/999999', { token: userToken });
+  assert.equal(unknown.status, 404);
+  const invalid = await call('/api/results/not-a-number', { token: userToken });
+  assert.equal(invalid.status, 400);
+});
+
+// ---- PER-008: personal learning reminders --------------------------------
+
+test('reminders default off, and status reports not due when disabled', async () => {
+  const me = await call('/api/auth/me', { token: userToken });
+  assert.equal(me.body.user.remindersEnabled, false);
+  assert.equal(me.body.user.reminderFrequency, 'weekly');
+
+  const status = await call('/api/reminders/status', { token: userToken });
+  assert.equal(status.status, 200);
+  assert.equal(status.body.due, false);
+});
+
+test('reminder frequency rejects an invalid value', async () => {
+  const r = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { reminderFrequency: 'daily' } });
+  assert.equal(r.status, 400);
+});
+
+test('enabling reminders with unfinished journey steps reports due, then throttles by frequency', async () => {
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { remindersEnabled: true, reminderFrequency: 'weekly' } });
+
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+
+  const first = await call('/api/reminders/status', { token: userToken });
+  assert.equal(first.body.due, true);
+  assert.equal(first.body.personaKey, winnerKey);
+  assert.equal(first.body.stepIndex, 0, 'with nothing completed yet, the next step should be index 0');
+  assert.equal(typeof first.body.stepTitle, 'string');
+
+  const second = await call('/api/reminders/status', { token: userToken });
+  assert.equal(second.body.due, false);
+
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { remindersEnabled: false } });
+});
+
+test('completing the whole journey means no reminder is due', async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+  const totalSteps = saved.body.result.persona.journey.length;
+
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { remindersEnabled: true } });
+
+  for (let i = 0; i < totalSteps; i++) {
+    await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: i } });
+  }
+
+  const status = await call('/api/reminders/status', { token: userToken });
+  assert.equal(status.body.due, false, 'a fully completed journey should never trigger a reminder');
+
+  await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { remindersEnabled: false } });
+});
+
+test('reminders require auth', async () => {
+  const r = await call('/api/reminders/status');
+  assert.equal(r.status, 401);
+});

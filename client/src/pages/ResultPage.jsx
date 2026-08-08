@@ -31,6 +31,19 @@ export default function ResultPage() {
 
   const result = location.state?.result;
   const fromHistory = location.state?.fromHistory || false;
+  const highlightStep = location.state?.highlightStep;
+  const [justHighlighted, setJustHighlighted] = useState(highlightStep);
+
+  useEffect(() => {
+    if (highlightStep === undefined || !result) return;
+    const el = document.getElementById(`journey-step-${highlightStep}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const t = setTimeout(() => setJustHighlighted(undefined), 2500);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightStep, result]);
 
   useEffect(() => {
     if (!result || fromHistory) return;
@@ -145,8 +158,17 @@ export default function ResultPage() {
           <div className="steps">
             {p.journey.map((step, i) => {
               const isDone = completedSteps.includes(i);
+              const isHighlighted = justHighlighted === i;
               return (
-                <div className="step" key={i} style={isDone ? { opacity: 0.7 } : undefined}>
+                <div
+                  className="step"
+                  key={i}
+                  id={`journey-step-${i}`}
+                  style={{
+                    ...(isDone ? { opacity: 0.7 } : {}),
+                    ...(isHighlighted ? { outline: `2px solid ${c[0]}`, outlineOffset: 4, borderRadius: 10, transition: 'outline-color .3s' } : {}),
+                  }}
+                >
                   <span className="num" style={{ background: i % 2 ? c[1] : c[0] }}>{isDone ? '✓' : i + 1}</span>
                   <div className="body">
                     <b>

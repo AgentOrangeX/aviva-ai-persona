@@ -11,6 +11,12 @@ CREATE TABLE IF NOT EXISTS users (
   -- Off by default (PER-007): a user must explicitly opt in before earned
   -- achievement badges are drawn onto their shareable persona card.
   share_achievements INTEGER NOT NULL DEFAULT 0,
+  -- Off by default (PER-008): personal learning reminders. frequency is
+  -- only meaningful once enabled; last_shown throttles how often the
+  -- in-app reminder banner re-appears, matching the chosen frequency.
+  reminders_enabled INTEGER NOT NULL DEFAULT 0,
+  reminder_frequency TEXT NOT NULL DEFAULT 'weekly', -- 'weekly' | 'biweekly' | 'monthly'
+  reminders_last_shown_at TEXT,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );

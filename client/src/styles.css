@@ -352,3 +352,17 @@ footer{text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:.8rem
   background:rgba(23,111,193,.1);color:var(--blue);
   font-size:.72rem;font-weight:800;
 }
+
+/* ---------- Reminder banner ---------- */
+.reminder-banner{
+  display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+  padding:12px 20px;background:linear-gradient(135deg,rgba(23,111,193,.1),rgba(89,194,71,.1));
+  border-bottom:1.5px solid var(--line);text-align:center;
+}
+.reminder-banner-text{font-size:.9rem;color:var(--ink)}
+.reminder-banner-actions{display:flex;align-items:center;gap:10px;flex:none}
+.reminder-banner-dismiss{
+  background:none;border:none;font-size:1.3rem;line-height:1;color:var(--ink-soft);
+  cursor:pointer;padding:0 4px;
+}
+.reminder-banner-dismiss:hover{color:var(--ink)}
