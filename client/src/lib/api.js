@@ -51,6 +51,7 @@ export const api = {
   myResults: () => request('/results/mine'),
   getResult: (id) => request(`/results/${id}`),
   getReminderStatus: () => request('/reminders/status'),
+  getRecommendations: () => request('/recommendations'),
   leaderboard: () => request('/results/leaderboard'),
   // admin
   adminOverview: () => request('/admin/overview'),

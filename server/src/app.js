@@ -12,6 +12,7 @@ import adminRoutes from './routes/admin.js';
 import analyticsRoutes from './routes/analytics.js';
 import progressRoutes from './routes/progress.js';
 import remindersRoutes from './routes/reminders.js';
+import recommendationsRoutes from './routes/recommendations.js';
 
 export function createApp() {
   const app = express();
@@ -44,6 +45,7 @@ export function createApp() {
   app.use('/api/analytics', apiLimiter, analyticsRoutes);
   app.use('/api/progress', apiLimiter, progressRoutes);
   app.use('/api/reminders', apiLimiter, remindersRoutes);
+  app.use('/api/recommendations', apiLimiter, recommendationsRoutes);
 
   // 404 + error handlers
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));

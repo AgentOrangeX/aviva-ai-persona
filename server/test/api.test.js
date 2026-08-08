@@ -629,10 +629,106 @@ test('completing the whole journey means no reminder is due', async () => {
   const status = await call('/api/reminders/status', { token: userToken });
   assert.equal(status.body.due, false, 'a fully completed journey should never trigger a reminder');
 
+  // clean up: this test intentionally completes every step, which would
+  // otherwise leak into any later test that expects an incomplete journey
+  // for this same user (fullAnswers always scores the same persona)
+  for (let i = 0; i < totalSteps; i++) {
+    await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: i } });
+  }
   await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { remindersEnabled: false } });
 });
 
 test('reminders require auth', async () => {
   const r = await call('/api/reminders/status');
   assert.equal(r.status, 401);
+});
+
+// ---- PER-009: dynamic learning recommendations ---------------------------
+
+test('recommendations require auth', async () => {
+  const r = await call('/api/recommendations');
+  assert.equal(r.status, 401);
+});
+
+test('a user with no saved result gets an empty recommendation list, not an error', async () => {
+  // register a brand-new user with no results at all
+  const email = `noresult_${Date.now()}@test.local`;
+  const reg = await call('/api/auth/register', { method: 'POST', body: { email, password: 'password123', name: 'No Result User' } });
+  assert.equal(reg.status, 201);
+  const freshToken = reg.body.token;
+
+  const r = await call('/api/recommendations', { token: freshToken });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.recommendations, []);
+  assert.equal(r.body.personaKey, null);
+});
+
+test('recommendations exclude journey steps already marked complete', async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+  const totalSteps = saved.body.result.persona.journey.length;
+
+  const before = await call('/api/recommendations', { token: userToken });
+  assert.equal(before.status, 200);
+  assert.equal(before.body.personaKey, winnerKey);
+  const journeyItemsBefore = before.body.recommendations.filter((r) => r.type === 'journey_step');
+  assert.ok(journeyItemsBefore.some((r) => r.stepIndex === 0), 'step 0 should be recommended before it is completed');
+
+  await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: 0 } });
+
+  const after = await call('/api/recommendations', { token: userToken });
+  const journeyItemsAfter = after.body.recommendations.filter((r) => r.type === 'journey_step');
+  assert.ok(!journeyItemsAfter.some((r) => r.stepIndex === 0), 'a completed step must never appear as a recommended next action');
+
+  // clean up
+  await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: 0 } });
+});
+
+test('every recommendation includes a human-readable reason', async () => {
+  await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const r = await call('/api/recommendations', { token: userToken });
+  assert.ok(r.body.recommendations.length > 0);
+  for (const item of r.body.recommendations) {
+    assert.equal(typeof item.reason, 'string');
+    assert.ok(item.reason.length > 0, 'every recommendation must say why it was recommended');
+  }
+});
+
+test('completing every journey step removes all journey recommendations, leaving only resources (if any)', async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+  const totalSteps = saved.body.result.persona.journey.length;
+
+  for (let i = 0; i < totalSteps; i++) {
+    await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: i } });
+  }
+
+  const r = await call('/api/recommendations', { token: userToken });
+  assert.ok(!r.body.recommendations.some((item) => item.type === 'journey_step'));
+
+  // clean up — see the equivalent note in the reminders test above
+  for (let i = 0; i < totalSteps; i++) {
+    await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: winnerKey, stepIndex: i } });
+  }
+});
+
+test('published resources for the matched persona appear in recommendations, draft ones do not', async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+
+  const pub = await call('/api/admin/learning-resources', {
+    method: 'POST', token: adminToken,
+    body: { title: 'Reco Published', type: 'link', url: 'https://example.com/reco-pub', personaKeys: [winnerKey] },
+  });
+  await call(`/api/admin/learning-resources/${pub.body.resource.id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'published' } });
+
+  await call('/api/admin/learning-resources', {
+    method: 'POST', token: adminToken,
+    body: { title: 'Reco Draft', type: 'link', url: 'https://example.com/reco-draft', personaKeys: [winnerKey] },
+  });
+
+  const r = await call('/api/recommendations', { token: userToken });
+  const titles = r.body.recommendations.map((item) => item.title);
+  assert.ok(titles.includes('Reco Published'));
+  assert.ok(!titles.includes('Reco Draft'));
 });

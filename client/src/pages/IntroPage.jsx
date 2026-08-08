@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PersonaArt } from '../components/PersonaArt.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import RecommendationsPanel from '../components/RecommendationsPanel.jsx';
 
 const PEEK = [
   ['explorer', 'Explorer'],
@@ -45,6 +46,8 @@ export default function IntroPage() {
           <div className="fact"><b>1</b><span>Rare persona to find</span></div>
         </div>
       </section>
+
+      <RecommendationsPanel />
     </div>
   );
 }
