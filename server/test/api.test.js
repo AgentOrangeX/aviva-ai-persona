@@ -259,3 +259,13 @@ test('area filter scopes the headline stats', async () => {
   assert.equal(claimsOnly.body.starts, 2);
   assert.equal(claimsOnly.body.completions, 1);
 });
+
+test('trust proxy is configured so client IPs behind Railway\'s reverse proxy are honoured', async () => {
+  // Without this, every request looks like it comes from the same IP (the
+  // proxy's), which makes IP-based rate limiting useless in production —
+  // and express-rate-limit logs a ValidationError to stderr on every
+  // request once X-Forwarded-For shows up without trust proxy set.
+  const { createApp } = await import('../src/app.js');
+  const app = createApp();
+  assert.equal(app.get('trust proxy'), 1);
+});
