@@ -20,6 +20,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsArea, setAnalyticsArea] = useState('');
+  const [auditLog, setAuditLog] = useState(null);
+  const [exporting, setExporting] = useState('');
   const [confirmUser, setConfirmUser] = useState(null); // user pending deletion
   const [deleting, setDeleting] = useState(false);
   const [roleTarget, setRoleTarget] = useState(null); // { user, nextRole } pending confirmation
@@ -41,11 +43,28 @@ export default function AdminPage() {
       })
       .catch((e) => setError(e.message));
     loadUsers();
+    api.adminAuditLog().then((r) => setAuditLog(r.entries)).catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => {
     api.adminAnalytics(analyticsArea || undefined).then(setAnalytics).catch((e) => setError(e.message));
   }, [analyticsArea]);
+
+  async function handleExport(dataset, filename) {
+    setExporting(dataset);
+    setError('');
+    try {
+      await api.adminExportDataset(dataset, filename);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting('');
+    }
+  }
+
+  function refreshAuditLog() {
+    api.adminAuditLog().then((r) => setAuditLog(r.entries)).catch(() => {});
+  }
 
   async function handleDelete() {
     if (!confirmUser) return;
@@ -61,6 +80,7 @@ export default function AdminPage() {
       );
       setConfirmUser(null);
       loadUsers();
+      refreshAuditLog();
       // refresh headline + distribution so counts stay accurate
       api.adminOverview().then(setOverview).catch(() => {});
       api.adminDistribution().then(setDistribution).catch(() => {});
@@ -84,6 +104,7 @@ export default function AdminPage() {
       );
       setRoleTarget(null);
       loadUsers();
+      refreshAuditLog();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -111,7 +132,12 @@ export default function AdminPage() {
       </div>
 
       <div className="panel">
-        <h3>📊 Usage &amp; drop-off</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+          <h3>📊 Usage &amp; drop-off</h3>
+          <button className="btn outline sm" disabled={exporting === 'analytics'} onClick={() => handleExport('analytics', 'usage-analytics.csv')}>
+            {exporting === 'analytics' ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
         <p className="admin-note">
           Quiz starts, completions and where people leave, tracked anonymously by browser —
           no individual is identified. Filter by business area to see that area's own
@@ -188,7 +214,12 @@ export default function AdminPage() {
       </div>
 
       <div className="panel">
-        <h3>Persona distribution</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+          <h3>Persona distribution</h3>
+          <button className="btn outline sm" disabled={exporting === 'distribution'} onClick={() => handleExport('distribution', 'persona-distribution.csv')}>
+            {exporting === 'distribution' ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
         {distribution.total === 0 ? (
           <p style={{ color: 'var(--ink-soft)' }}>No completed assessments yet.</p>
         ) : (
@@ -203,7 +234,12 @@ export default function AdminPage() {
       </div>
 
       <div className="panel">
-        <h3>AI maturity by business area</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+          <h3>AI maturity by business area</h3>
+          <button className="btn outline sm" disabled={exporting === 'heatmap'} onClick={() => handleExport('heatmap', 'maturity-heatmap.csv')}>
+            {exporting === 'heatmap' ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
         <p className="admin-note">
           Average dimension scores (0–100) for each business area, across all saved results.
           Useful for spotting where to focus enablement.
@@ -311,6 +347,51 @@ export default function AdminPage() {
                       >
                         Delete first result
                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <h3>📋 Audit log</h3>
+        <p className="admin-note">
+          Every admin action, with who did it and when. Read-only — nothing here can be edited
+          or deleted, including by admins.
+        </p>
+        {!auditLog ? (
+          <p style={{ color: 'var(--ink-soft)' }}>Loading audit log…</p>
+        ) : auditLog.length === 0 ? (
+          <p style={{ color: 'var(--ink-soft)' }}>No admin actions recorded yet.</p>
+        ) : (
+          <div className="utable-scroll">
+            <table className="utable">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Admin</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLog.map((e) => (
+                  <tr key={e.id}>
+                    <td className="usub">{new Date(e.createdAt).toLocaleString()}</td>
+                    <td>{e.adminName}</td>
+                    <td>
+                      {e.action === 'role_change' && (
+                        <>
+                          {e.details.to === 'admin' ? 'Granted admin access to ' : 'Removed admin access from '}
+                          <b>{e.targetName}</b>
+                        </>
+                      )}
+                      {e.action === 'delete_first_result' && (
+                        <>Deleted <b>{e.targetName}</b>'s first result</>
+                      )}
+                      {!['role_change', 'delete_first_result'].includes(e.action) && e.action}
                     </td>
                   </tr>
                 ))}

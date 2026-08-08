@@ -51,3 +51,20 @@ CREATE TABLE IF NOT EXISTS quiz_events (
 CREATE INDEX IF NOT EXISTS idx_quiz_events_attempt ON quiz_events(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_events_visitor ON quiz_events(visitor_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_events_type ON quiz_events(event_type);
+
+-- Audit trail for admin actions (PER-004: "access is role controlled and
+-- auditable"). Names are snapshotted at the time of the action so the log
+-- stays readable even if an account is later renamed or removed.
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_user_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  admin_name     TEXT    NOT NULL,
+  action         TEXT    NOT NULL,   -- 'role_change' | 'delete_first_result'
+  target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  target_name    TEXT,
+  details_json   TEXT    NOT NULL DEFAULT '{}',
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON admin_audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_log_admin ON admin_audit_log(admin_user_id);
