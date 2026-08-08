@@ -84,5 +84,8 @@ function ensureColumn(table, column, definition) {
   }
 }
 ensureColumn('users', 'share_achievements', "INTEGER NOT NULL DEFAULT 0");
+ensureColumn('users', 'reminders_enabled', "INTEGER NOT NULL DEFAULT 0");
+ensureColumn('users', 'reminder_frequency', "TEXT NOT NULL DEFAULT 'weekly'");
+ensureColumn('users', 'reminders_last_shown_at', "TEXT");
 
 export default db;

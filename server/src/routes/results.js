@@ -95,26 +95,27 @@ router.post('/', requireAuth, (req, res) => {
   });
 });
 
+function rowToResult(r) {
+  const scored = {
+    winner: r.persona,
+    runnerUp: r.runner_up,
+    dimPct: JSON.parse(r.dim_json),
+    rare: !!r.rare,
+    champ: r.champ_score,
+  };
+  return {
+    id: r.id,
+    createdAt: r.created_at,
+    ...enrich(scored, JSON.parse(r.achievements)),
+  };
+}
+
 // GET /api/results/mine — current user's saved results, newest first.
 router.get('/mine', requireAuth, (req, res) => {
   const rows = db
     .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC')
     .all(req.user.sub);
-  const results = rows.map((r) => {
-    const scored = {
-      winner: r.persona,
-      runnerUp: r.runner_up,
-      dimPct: JSON.parse(r.dim_json),
-      rare: !!r.rare,
-      champ: r.champ_score,
-    };
-    return {
-      id: r.id,
-      createdAt: r.created_at,
-      ...enrich(scored, JSON.parse(r.achievements)),
-    };
-  });
-  res.json({ results });
+  res.json({ results: rows.map(rowToResult) });
 });
 
 // GET /api/results/leaderboard — top 20 by champion score, counting only
@@ -162,6 +163,25 @@ router.get('/leaderboard', requireAuth, (req, res) => {
     : null;
 
   res.json({ leaderboard: top, me, totalRanked: ranked.length });
+});
+
+// GET /api/results/:id — a single saved result, scoped to its owner. This
+// gives reminders (PER-008) and any other "come back to this" link a
+// stable URL to point at, rather than relying on React Router state that
+// only exists mid-session. Registered last so it never shadows the literal
+// routes above ('mine', 'leaderboard') — Express matches route patterns in
+// registration order, and '/:id' would otherwise swallow both.
+router.get('/:id', requireAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid result id.' });
+
+  const row = db.prepare('SELECT * FROM results WHERE id = ?').get(id);
+  if (!row || row.user_id !== req.user.sub) {
+    // 404 rather than 403 — don't confirm to a caller that a given id
+    // belongs to someone else.
+    return res.status(404).json({ error: 'Result not found.' });
+  }
+  res.json({ result: rowToResult(row) });
 });
 
 export default router;

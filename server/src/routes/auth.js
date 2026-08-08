@@ -21,6 +21,8 @@ function publicUser(row) {
     businessArea: row.business_area,
     role: row.role,
     shareAchievements: !!row.share_achievements,
+    remindersEnabled: !!row.reminders_enabled,
+    reminderFrequency: row.reminder_frequency,
   };
 }
 
@@ -99,13 +101,19 @@ router.patch('/profile', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.sub);
   if (!row) return res.status(404).json({ error: 'User not found.' });
 
-  const { name, jobTitle, businessArea, email, shareAchievements } = req.body || {};
+  const { name, jobTitle, businessArea, email, shareAchievements, remindersEnabled, reminderFrequency } = req.body || {};
 
   if (name !== undefined && !isNonEmptyString(name)) {
     return res.status(400).json({ error: 'Your name cannot be empty.' });
   }
   if (shareAchievements !== undefined && typeof shareAchievements !== 'boolean') {
     return res.status(400).json({ error: 'shareAchievements must be true or false.' });
+  }
+  if (remindersEnabled !== undefined && typeof remindersEnabled !== 'boolean') {
+    return res.status(400).json({ error: 'remindersEnabled must be true or false.' });
+  }
+  if (reminderFrequency !== undefined && !['weekly', 'biweekly', 'monthly'].includes(reminderFrequency)) {
+    return res.status(400).json({ error: "reminderFrequency must be 'weekly', 'biweekly', or 'monthly'." });
   }
 
   let nextEmail = row.email;
@@ -118,7 +126,8 @@ router.patch('/profile', requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE users
-       SET name = ?, job_title = ?, business_area = ?, email = ?, share_achievements = ?, updated_at = datetime('now')
+       SET name = ?, job_title = ?, business_area = ?, email = ?, share_achievements = ?,
+           reminders_enabled = ?, reminder_frequency = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(
     name !== undefined ? sanitiseString(name) : row.name,
@@ -126,6 +135,8 @@ router.patch('/profile', requireAuth, (req, res) => {
     businessArea !== undefined ? sanitiseString(businessArea) : row.business_area,
     nextEmail,
     shareAchievements !== undefined ? (shareAchievements ? 1 : 0) : row.share_achievements,
+    remindersEnabled !== undefined ? (remindersEnabled ? 1 : 0) : row.reminders_enabled,
+    reminderFrequency !== undefined ? reminderFrequency : row.reminder_frequency,
     row.id
   );
 
