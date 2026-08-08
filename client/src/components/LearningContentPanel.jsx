@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
+import { AdminBtn } from './AdminBtn.jsx';
+import { Plus, Pencil, Send, Archive, Trash2, Check } from 'lucide-react';
 
 const TYPE_LABELS = {
   document: 'Document',
@@ -120,9 +122,9 @@ export default function LearningContentPanel() {
   }
 
   function nextStatusAction(status) {
-    if (status === 'draft') return { label: 'Publish', to: 'published' };
-    if (status === 'published') return { label: 'Archive', to: 'archived' };
-    return { label: 'Publish', to: 'published' }; // archived -> republish
+    if (status === 'draft') return { label: 'Publish', to: 'published', icon: Send, variant: 'primary' };
+    if (status === 'published') return { label: 'Archive', to: 'archived', icon: Archive, variant: 'secondary' };
+    return { label: 'Publish', to: 'published', icon: Send, variant: 'primary' }; // archived -> republish
   }
 
   return (
@@ -130,7 +132,7 @@ export default function LearningContentPanel() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
         <h3>📚 Learning content</h3>
         {!form && (
-          <button className="btn sm" onClick={openCreate}>+ New resource</button>
+          <AdminBtn variant="primary" icon={Plus} onClick={openCreate}>New resource</AdminBtn>
         )}
       </div>
       <p className="admin-note">
@@ -195,10 +197,10 @@ export default function LearningContentPanel() {
             </div>
 
             <div className="modal-actions">
-              <button className="btn outline sm" disabled={saving} onClick={() => setForm(null)}>Cancel</button>
-              <button className="btn sm" disabled={saving} onClick={submitForm}>
+              <AdminBtn variant="secondary" disabled={saving} onClick={() => setForm(null)}>Cancel</AdminBtn>
+              <AdminBtn variant="primary" icon={Check} disabled={saving} onClick={submitForm}>
                 {saving ? 'Saving…' : form.editingId ? 'Save changes' : 'Create draft'}
-              </button>
+              </AdminBtn>
             </div>
           </div>
         </div>
@@ -239,9 +241,11 @@ export default function LearningContentPanel() {
                       </span>
                     </td>
                     <td className="act">
-                      <button className="btn outline sm" onClick={() => openEdit(r)}>Edit</button>
-                      <button className="btn sm" onClick={() => handleStatusChange(r, next.to)}>{next.label}</button>
-                      <button className="btn-danger sm" onClick={() => setConfirmDelete(r)}>Delete</button>
+                      <div className="admin-actions">
+                        <AdminBtn variant="secondary" icon={Pencil} onClick={() => openEdit(r)}>Edit</AdminBtn>
+                        <AdminBtn variant={next.variant} icon={next.icon} onClick={() => handleStatusChange(r, next.to)}>{next.label}</AdminBtn>
+                        <AdminBtn variant="danger" icon={Trash2} onClick={() => setConfirmDelete(r)}>Delete</AdminBtn>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -260,10 +264,10 @@ export default function LearningContentPanel() {
               anyone's learning record it currently appears in. This cannot be undone.
             </p>
             <div className="modal-actions">
-              <button className="btn outline sm" disabled={deleting} onClick={() => setConfirmDelete(null)}>Cancel</button>
-              <button className="btn-danger" disabled={deleting} onClick={handleDelete}>
+              <AdminBtn variant="secondary" disabled={deleting} onClick={() => setConfirmDelete(null)}>Cancel</AdminBtn>
+              <AdminBtn variant="danger" icon={Trash2} disabled={deleting} onClick={handleDelete}>
                 {deleting ? 'Deleting…' : 'Yes, delete it'}
-              </button>
+              </AdminBtn>
             </div>
           </div>
         </div>
