@@ -3,7 +3,7 @@
 // In development, leave VITE_API_URL unset — Vite proxies /api to the backend.
 // In production (separate frontend/backend hosts), set VITE_API_URL to the
 // backend's public origin, e.g. https://aviva-persona-api.up.railway.app
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 const TOKEN_KEY = 'aviva_token';
 
@@ -56,6 +56,8 @@ export const api = {
   adminHeatmap: () => request('/admin/heatmap'),
   adminChampions: () => request('/admin/champions'),
   adminUsers: () => request('/admin/users'),
+  adminAnalytics: (businessArea) =>
+    request(`/admin/analytics${businessArea ? `?businessArea=${encodeURIComponent(businessArea)}` : ''}`),
   adminDeleteFirstResult: (userId) =>
     request(`/admin/users/${userId}/first-result`, { method: 'DELETE' }),
   adminSetUserRole: (userId, role) =>

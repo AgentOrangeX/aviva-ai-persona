@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import quizRoutes from './routes/quiz.js';
 import resultRoutes from './routes/results.js';
 import adminRoutes from './routes/admin.js';
+import analyticsRoutes from './routes/analytics.js';
 
 export function createApp() {
   const app = express();
@@ -34,6 +35,7 @@ export function createApp() {
   app.use('/api/quiz', apiLimiter, quizRoutes);
   app.use('/api/results', apiLimiter, resultRoutes);
   app.use('/api/admin', apiLimiter, adminRoutes);
+  app.use('/api/analytics', apiLimiter, analyticsRoutes);
 
   // 404 + error handlers
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));

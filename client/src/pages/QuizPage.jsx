@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/UI.jsx';
+import { newAttemptId, trackEvent } from '../lib/analytics.js';
 
 const TAG_CLASS = {
   Insurance: 'ins',
@@ -22,6 +23,8 @@ export default function QuizPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const attemptId = useRef(newAttemptId());
+  const startTracked = useRef(false);
 
   useEffect(() => {
     api
@@ -29,6 +32,13 @@ export default function QuizPage() {
       .then((d) => setQuestions(d.questions))
       .catch((e) => setError(e.message));
   }, []);
+
+  useEffect(() => {
+    if (questions && !startTracked.current) {
+      startTracked.current = true;
+      trackEvent(attemptId.current, 'start');
+    }
+  }, [questions]);
 
   const total = questions?.length || 0;
   const answeredCount = Object.keys(answers).length;
@@ -61,6 +71,7 @@ export default function QuizPage() {
       if (!current) return;
       const next = { ...answers, [current.id]: optionIndex };
       setAnswers(next);
+      trackEvent(attemptId.current, 'step', { questionIndex: idx });
 
       // streak feedback when answering quickly in sequence
       const c = Object.keys(next).length;
@@ -73,6 +84,7 @@ export default function QuizPage() {
       if (idx + 1 < total) {
         setTimeout(() => setIdx(idx + 1), 180);
       } else {
+        trackEvent(attemptId.current, 'complete');
         toast({ emoji: '🎉', title: 'All done!', detail: user ? 'Crunching your persona…' : 'Create an account to reveal your persona' });
         finish(next);
       }

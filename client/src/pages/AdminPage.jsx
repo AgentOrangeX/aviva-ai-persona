@@ -18,6 +18,8 @@ export default function AdminPage() {
   const [heatmap, setHeatmap] = useState(null);
   const [champions, setChampions] = useState(null);
   const [users, setUsers] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsArea, setAnalyticsArea] = useState('');
   const [confirmUser, setConfirmUser] = useState(null); // user pending deletion
   const [deleting, setDeleting] = useState(false);
   const [roleTarget, setRoleTarget] = useState(null); // { user, nextRole } pending confirmation
@@ -40,6 +42,10 @@ export default function AdminPage() {
       .catch((e) => setError(e.message));
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    api.adminAnalytics(analyticsArea || undefined).then(setAnalytics).catch((e) => setError(e.message));
+  }, [analyticsArea]);
 
   async function handleDelete() {
     if (!confirmUser) return;
@@ -102,6 +108,83 @@ export default function AdminPage() {
         <div className="stat"><b>{overview.assessedUsers}</b><span>Completed assessment</span></div>
         <div className="stat"><b>{overview.highPotentialChampions}</b><span>High-potential champions</span></div>
         <div className="stat"><b>{overview.rareResults}</b><span>Rare personas found</span></div>
+      </div>
+
+      <div className="panel">
+        <h3>📊 Usage &amp; drop-off</h3>
+        <p className="admin-note">
+          Quiz starts, completions and where people leave, tracked anonymously by browser —
+          no individual is identified. Filter by business area to see that area's own
+          completion rate; the breakdown table below is always organisation-wide.
+        </p>
+
+        <div className="field" style={{ maxWidth: 280, marginBottom: 16 }}>
+          <label htmlFor="analytics-area">Filter headline stats by area</label>
+          <select id="analytics-area" value={analyticsArea} onChange={(e) => setAnalyticsArea(e.target.value)}>
+            <option value="">All areas</option>
+            {analytics?.areas
+              .filter((a) => !a.suppressed)
+              .map((a) => (
+                <option key={a.area} value={a.area}>{a.area}</option>
+              ))}
+          </select>
+        </div>
+
+        {!analytics ? (
+          <p style={{ color: 'var(--ink-soft)' }}>Loading usage data…</p>
+        ) : (
+          <>
+            <div className="stat-row">
+              <div className="stat"><b>{analytics.starts}</b><span>Quiz starts</span></div>
+              <div className="stat"><b>{analytics.completions}</b><span>Completions</span></div>
+              <div className="stat"><b>{Math.round(analytics.completionRate * 100)}%</b><span>Completion rate</span></div>
+              <div className="stat"><b>{analytics.repeatVisitors}</b><span>Repeat visitors</span></div>
+            </div>
+
+            <h4 style={{ margin: '18px 0 8px', fontSize: '.9rem' }}>Where people drop off</h4>
+            {analytics.starts - analytics.completions === 0 ? (
+              <p style={{ color: 'var(--ink-soft)' }}>No unfinished attempts — everyone who started has finished.</p>
+            ) : (
+              analytics.dropOff.map((d) => (
+                <div className="dist-bar" key={d.key}>
+                  <span className="lab">{d.label}</span>
+                  <div className="track"><i style={{ width: `${d.pct}%`, background: 'linear-gradient(90deg, var(--yellow), var(--yellow-d))' }} /></div>
+                  <span className="pct">{d.count}</span>
+                </div>
+              ))
+            )}
+
+            <h4 style={{ margin: '18px 0 8px', fontSize: '.9rem' }}>By business area</h4>
+            <div className="utable-scroll">
+              <table className="utable">
+                <thead>
+                  <tr>
+                    <th>Area</th>
+                    <th className="num">Starts</th>
+                    <th className="num">Completion rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.areas.map((a) => (
+                    <tr key={a.area}>
+                      <td>{a.area}</td>
+                      <td className="num">{a.starts}</td>
+                      <td className="num">
+                        {a.suppressed ? (
+                          <span style={{ color: 'var(--ink-soft)' }} title="Fewer than 5 attempts — hidden to avoid identifying individuals">
+                            Too small to show
+                          </span>
+                        ) : (
+                          `${Math.round(a.completionRate * 100)}%`
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="panel">
