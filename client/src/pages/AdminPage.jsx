@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
+import LearningContentPanel from '../components/LearningContentPanel.jsx';
 
 function heatColor(v) {
   // 0 -> pale, 100 -> strong Aviva blue/green blend
@@ -9,6 +10,25 @@ function heatColor(v) {
   const g = Math.round(227 + (111 - 227) * t);
   const b = Math.round(216 + (193 - 216) * t);
   return `rgb(${r},${g},${b})`;
+}
+
+function describeAuditEntry(e) {
+  switch (e.action) {
+    case 'role_change':
+      return <>{e.details.to === 'admin' ? 'Granted admin access to ' : 'Removed admin access from '}<b>{e.targetName}</b></>;
+    case 'delete_first_result':
+      return <>Deleted <b>{e.targetName}</b>'s first result</>;
+    case 'resource_create':
+      return <>Created learning resource <b>{e.targetName}</b></>;
+    case 'resource_update':
+      return <>Edited learning resource <b>{e.targetName}</b></>;
+    case 'resource_status_change':
+      return <>Set <b>{e.targetName}</b> to {e.details.to}</>;
+    case 'resource_delete':
+      return <>Deleted learning resource <b>{e.targetName}</b></>;
+    default:
+      return e.action;
+  }
 }
 
 export default function AdminPage() {
@@ -356,6 +376,8 @@ export default function AdminPage() {
         )}
       </div>
 
+      <LearningContentPanel />
+
       <div className="panel">
         <h3>📋 Audit log</h3>
         <p className="admin-note">
@@ -381,18 +403,7 @@ export default function AdminPage() {
                   <tr key={e.id}>
                     <td className="usub">{new Date(e.createdAt).toLocaleString()}</td>
                     <td>{e.adminName}</td>
-                    <td>
-                      {e.action === 'role_change' && (
-                        <>
-                          {e.details.to === 'admin' ? 'Granted admin access to ' : 'Removed admin access from '}
-                          <b>{e.targetName}</b>
-                        </>
-                      )}
-                      {e.action === 'delete_first_result' && (
-                        <>Deleted <b>{e.targetName}</b>'s first result</>
-                      )}
-                      {!['role_change', 'delete_first_result'].includes(e.action) && e.action}
-                    </td>
+                    <td>{describeAuditEntry(e)}</td>
                   </tr>
                 ))}
               </tbody>

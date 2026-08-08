@@ -59,6 +59,12 @@ export const api = {
   adminAnalytics: (businessArea) =>
     request(`/admin/analytics${businessArea ? `?businessArea=${encodeURIComponent(businessArea)}` : ''}`),
   adminAuditLog: () => request('/admin/audit-log'),
+  adminLearningResources: () => request('/admin/learning-resources'),
+  adminCreateLearningResource: (payload) => request('/admin/learning-resources', { method: 'POST', body: payload }),
+  adminUpdateLearningResource: (id, payload) => request(`/admin/learning-resources/${id}`, { method: 'PATCH', body: payload }),
+  adminSetLearningResourceStatus: (id, status) =>
+    request(`/admin/learning-resources/${id}/status`, { method: 'PATCH', body: { status } }),
+  adminDeleteLearningResource: (id) => request(`/admin/learning-resources/${id}`, { method: 'DELETE' }),
   // CSV export needs the auth header, so it can't be a plain <a href> link
   // (the browser wouldn't attach the token) or a URL with the token in the
   // query string (tokens shouldn't sit in browser history/server logs).

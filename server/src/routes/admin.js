@@ -7,6 +7,17 @@ import { PERSONAS } from '../lib/personas.js';
 import { buildAnalyticsSummary } from '../lib/analytics.js';
 import { logAdminAction, listAuditLog } from '../lib/audit.js';
 import { distributionToCsv, heatmapToCsv, analyticsToCsv } from '../lib/export.js';
+import {
+  isValidType,
+  isValidStatus,
+  isValidPersonaKeys,
+  listResources,
+  getResource,
+  createResource,
+  updateResource,
+  setResourceStatus,
+  deleteResource,
+} from '../lib/learningResources.js';
 
 const router = Router();
 router.use(requireAdmin);
@@ -286,6 +297,126 @@ router.get('/export', (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(csv);
+});
+
+// ---- PER-034: learning content administration --------------------------
+
+function validateResourceBody(body) {
+  const { title, description, type, url, personaKeys } = body || {};
+  if (typeof title !== 'string' || !title.trim()) return 'Title is required.';
+  if (title.length > 200) return 'Title must be 200 characters or fewer.';
+  if (description !== undefined && description !== null && typeof description !== 'string') {
+    return 'Description must be text.';
+  }
+  if (!isValidType(type)) return "type must be 'document', 'video', 'link', or 'platform_url'.";
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return 'A valid http(s) URL is required.';
+  if (!isValidPersonaKeys(personaKeys)) return 'personaKeys must be a non-empty array of valid persona keys.';
+  return null;
+}
+
+// GET /api/admin/learning-resources — every resource regardless of status,
+// each with its assigned personas. Admin-only; this is the authoring view,
+// not what learners see (see publishedResourcesForPersona for that).
+router.get('/learning-resources', (_req, res) => {
+  res.json({ resources: listResources() });
+});
+
+// POST /api/admin/learning-resources — always created as 'draft'; use the
+// status endpoint below to publish once it's ready.
+router.post('/learning-resources', (req, res) => {
+  const err = validateResourceBody(req.body);
+  if (err) return res.status(400).json({ error: err });
+
+  const { title, description, type, url, personaKeys } = req.body;
+  const resource = createResource({ title: title.trim(), description, type, url, personaKeys, createdBy: req.user.sub });
+
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'resource_create',
+    targetName: resource.title,
+    details: { resourceId: resource.id, type: resource.type, personas: resource.personas },
+  });
+
+  res.status(201).json({ resource });
+});
+
+// PATCH /api/admin/learning-resources/:id — edits content and persona
+// assignment. Does not touch status; use the status endpoint for that so
+// "publish" and "archive" stay explicit, auditable actions on their own.
+router.patch('/learning-resources/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid resource id.' });
+
+  const existing = getResource(id);
+  if (!existing) return res.status(404).json({ error: 'Resource not found.' });
+
+  const err = validateResourceBody(req.body);
+  if (err) return res.status(400).json({ error: err });
+
+  const { title, description, type, url, personaKeys } = req.body;
+  const resource = updateResource(id, { title: title.trim(), description, type, url, personaKeys });
+
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'resource_update',
+    targetName: resource.title,
+    details: { resourceId: id },
+  });
+
+  res.json({ resource });
+});
+
+// PATCH /api/admin/learning-resources/:id/status — publish, archive, or
+// send back to draft. Kept as its own endpoint so publishing a resource
+// (which makes it visible to real users) is always its own distinct,
+// auditable action rather than a side effect of an edit.
+router.patch('/learning-resources/:id/status', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid resource id.' });
+
+  const existing = getResource(id);
+  if (!existing) return res.status(404).json({ error: 'Resource not found.' });
+
+  const { status } = req.body || {};
+  if (!isValidStatus(status)) return res.status(400).json({ error: "status must be 'draft', 'published', or 'archived'." });
+
+  if (existing.status === status) {
+    return res.json({ resource: existing, changed: false });
+  }
+
+  const resource = setResourceStatus(id, status);
+
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'resource_status_change',
+    targetName: resource.title,
+    details: { resourceId: id, from: existing.status, to: status },
+  });
+
+  res.json({ resource, changed: true });
+});
+
+// DELETE /api/admin/learning-resources/:id — removes it entirely, including
+// its persona assignments. Once deleted it stops appearing in any learning
+// record on the next request; there is no "undo" beyond the audit record
+// of what it was.
+router.delete('/learning-resources/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid resource id.' });
+
+  const existing = getResource(id);
+  if (!existing) return res.status(404).json({ error: 'Resource not found.' });
+
+  deleteResource(id);
+
+  logAdminAction({
+    adminId: req.user.sub,
+    action: 'resource_delete',
+    targetName: existing.title,
+    details: { resourceId: id, type: existing.type, personas: existing.personas },
+  });
+
+  res.json({ deletedResourceId: id });
 });
 
 export default router;
