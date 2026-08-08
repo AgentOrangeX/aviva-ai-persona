@@ -118,11 +118,36 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json({ results: rows.map(rowToResult) });
 });
 
+// Below this many people in a filtered group, we don't show a named
+// leaderboard at all — same threshold and reasoning as PER-003's admin
+// analytics suppression. The GLOBAL (unfiltered) leaderboard already shows
+// real names org-wide and that's pre-existing, accepted behaviour; a
+// business area or function slice can be small enough that "leaderboard"
+// effectively becomes "here is exactly how these two named people scored",
+// which is a materially different privacy exposure.
+const MIN_LEADERBOARD_COHORT = 5;
+
+function sanitiseFilterValue(v) {
+  return typeof v === 'string' && v.trim() ? v.trim().slice(0, 200) : null;
+}
+
 // GET /api/results/leaderboard — top 20 by champion score, counting only
 // each user's FIRST assessment (retakes are excluded). Also returns the
 // requesting user's own rank, even if they fall outside the top 20.
+// Optional ?businessArea= and ?businessFunction= scope it to that group;
+// groups below MIN_LEADERBOARD_COHORT are suppressed entirely, including
+// the "me" section — showing even just your own rank in a group of 1-2
+// can reveal the other person's score by elimination.
 router.get('/leaderboard', requireAuth, (req, res) => {
-  // One row per user: their earliest result (lowest id = first taken).
+  const businessArea = sanitiseFilterValue(req.query.businessArea);
+  const businessFunction = sanitiseFilterValue(req.query.businessFunction);
+  const isFiltered = !!(businessArea || businessFunction);
+
+  const conditions = [];
+  const params = [];
+  if (businessArea) { conditions.push('u.business_area = ?'); params.push(businessArea); }
+  if (businessFunction) { conditions.push('u.business_function = ?'); params.push(businessFunction); }
+
   const firstResults = db
     .prepare(
       `SELECT r.user_id, r.persona, r.champ_score, r.rare, r.created_at, u.name
@@ -130,9 +155,20 @@ router.get('/leaderboard', requireAuth, (req, res) => {
          JOIN (SELECT user_id, MIN(id) AS first_id FROM results GROUP BY user_id) f
            ON r.id = f.first_id
          JOIN users u ON u.id = r.user_id
+         ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
         ORDER BY r.champ_score DESC, r.created_at ASC`
     )
-    .all();
+    .all(...params);
+
+  if (isFiltered && firstResults.length < MIN_LEADERBOARD_COHORT) {
+    return res.json({
+      suppressed: true,
+      cohortSize: firstResults.length,
+      minCohortSize: MIN_LEADERBOARD_COHORT,
+      businessArea,
+      businessFunction,
+    });
+  }
 
   // Assign dense ranks (ties share a rank).
   const ranked = firstResults.map((row, i) => ({ ...row, rank: i + 1 }));
@@ -162,7 +198,57 @@ router.get('/leaderboard', requireAuth, (req, res) => {
       }
     : null;
 
-  res.json({ leaderboard: top, me, totalRanked: ranked.length });
+  res.json({
+    suppressed: false,
+    leaderboard: top,
+    me,
+    totalRanked: ranked.length,
+    businessArea,
+    businessFunction,
+  });
+});
+
+// GET /api/results/leaderboard/groups — which business areas (and, within
+// each, which functions) currently have enough people to show a filtered
+// leaderboard for. Deliberately never lists a group below the threshold —
+// even the fact that a group is "too small to show" is itself the kind of
+// thing that shouldn't be surfaced (it can reveal headcount for a small
+// team). Registered before the generic '/:id' route below.
+router.get('/leaderboard/groups', requireAuth, (_req, res) => {
+  const areaCounts = db
+    .prepare(
+      `SELECT u.business_area area, COUNT(*) n
+         FROM results r
+         JOIN (SELECT user_id, MIN(id) AS first_id FROM results GROUP BY user_id) f ON r.id = f.first_id
+         JOIN users u ON u.id = r.user_id
+        WHERE u.business_area IS NOT NULL AND u.business_area != ''
+        GROUP BY u.business_area`
+    )
+    .all();
+
+  const functionCounts = db
+    .prepare(
+      `SELECT u.business_area area, u.business_function func, COUNT(*) n
+         FROM results r
+         JOIN (SELECT user_id, MIN(id) AS first_id FROM results GROUP BY user_id) f ON r.id = f.first_id
+         JOIN users u ON u.id = r.user_id
+        WHERE u.business_area IS NOT NULL AND u.business_area != ''
+          AND u.business_function IS NOT NULL AND u.business_function != ''
+        GROUP BY u.business_area, u.business_function`
+    )
+    .all();
+
+  const areas = areaCounts.filter((r) => r.n >= MIN_LEADERBOARD_COHORT).map((r) => r.area).sort();
+
+  const functionsByArea = {};
+  for (const r of functionCounts) {
+    if (r.n < MIN_LEADERBOARD_COHORT) continue;
+    if (!functionsByArea[r.area]) functionsByArea[r.area] = [];
+    functionsByArea[r.area].push(r.func);
+  }
+  for (const area of Object.keys(functionsByArea)) functionsByArea[area].sort();
+
+  res.json({ areas, functionsByArea, minCohortSize: MIN_LEADERBOARD_COHORT });
 });
 
 // GET /api/results/:id — a single saved result, scoped to its owner. This

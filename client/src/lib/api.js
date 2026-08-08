@@ -53,7 +53,14 @@ export const api = {
   getReminderStatus: () => request('/reminders/status'),
   getRecommendations: () => request('/recommendations'),
   getPathway: () => request('/pathway'),
-  leaderboard: () => request('/results/leaderboard'),
+  leaderboard: ({ businessArea, businessFunction } = {}) => {
+    const params = new URLSearchParams();
+    if (businessArea) params.set('businessArea', businessArea);
+    if (businessFunction) params.set('businessFunction', businessFunction);
+    const qs = params.toString();
+    return request(`/results/leaderboard${qs ? `?${qs}` : ''}`);
+  },
+  leaderboardGroups: () => request('/results/leaderboard/groups'),
   // admin
   adminOverview: () => request('/admin/overview'),
   adminDistribution: () => request('/admin/distribution'),

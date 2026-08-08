@@ -12,25 +12,73 @@ function medal(rank) {
 
 export default function LeaderboardPage() {
   const [data, setData] = useState(null);
+  const [groups, setGroups] = useState(null);
+  const [businessArea, setBusinessArea] = useState('');
+  const [businessFunction, setBusinessFunction] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.leaderboard().then(setData).catch((e) => setError(e.message));
+    api.leaderboardGroups().then(setGroups).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setData(null);
+    api.leaderboard({ businessArea, businessFunction }).then(setData).catch((e) => setError(e.message));
+  }, [businessArea, businessFunction]);
+
+  function onAreaChange(e) {
+    setBusinessArea(e.target.value);
+    setBusinessFunction(''); // a function from the old area may not apply to the new one
+  }
 
   if (error) return <div className="wrap"><div className="center-msg">{error}</div></div>;
   if (!data) return <div className="wrap"><div className="center-msg">Loading the leaderboard…</div></div>;
+
+  const functionOptions = businessArea ? groups?.functionsByArea?.[businessArea] || [] : [];
+  const scopeLabel = businessFunction ? `${businessFunction} (${businessArea})` : businessArea || null;
 
   const { leaderboard, me } = data;
 
   return (
     <div className="wrap">
       <div className="admin-head">
-        <h1>🏆 Champion leaderboard</h1>
-        <p>The top 20 champion-potential scores across Aviva. Based on everyone's first assessment — retakes don't count, so it's a level field.</p>
+        <h1>🏆 {scopeLabel ? `${scopeLabel} leaderboard` : 'Champion leaderboard'}</h1>
+        <p>
+          {scopeLabel
+            ? `Top scores within ${scopeLabel}. Based on everyone's first assessment — retakes don't count.`
+            : "The top 20 champion-potential scores across Aviva. Based on everyone's first assessment — retakes don't count, so it's a level field."}
+        </p>
       </div>
 
-      {leaderboard.length === 0 ? (
+      {groups && (groups.areas.length > 0) && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+          <div className="field" style={{ maxWidth: 260, marginBottom: 0 }}>
+            <label htmlFor="lb-area">Business area</label>
+            <select id="lb-area" value={businessArea} onChange={onAreaChange}>
+              <option value="">Everyone</option>
+              {groups.areas.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          {businessArea && functionOptions.length > 0 && (
+            <div className="field" style={{ maxWidth: 260, marginBottom: 0 }}>
+              <label htmlFor="lb-function">Function</label>
+              <select id="lb-function" value={businessFunction} onChange={(e) => setBusinessFunction(e.target.value)}>
+                <option value="">All of {businessArea}</option>
+                {functionOptions.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {data.suppressed ? (
+        <div className="center-msg">
+          <p>
+            Not enough people in {scopeLabel} yet to show a leaderboard — we need at least{' '}
+            {data.minCohortSize} to keep individual scores from being identifiable in such a small group.
+          </p>
+        </div>
+      ) : leaderboard.length === 0 ? (
         <div className="center-msg">
           <p>No results on the board yet — be the first!</p>
           <Link to="/quiz" className="btn" style={{ marginTop: 16 }}>Take the quiz →</Link>
@@ -55,7 +103,7 @@ export default function LeaderboardPage() {
       )}
 
       {/* Show the user's own standing if they're not already in the visible top 20 */}
-      {me && !me.inTop && (
+      {!data.suppressed && me && !me.inTop && (
         <>
           <div className="lb-divider"><span>Your position</span></div>
           <div className="lb">
@@ -76,11 +124,11 @@ export default function LeaderboardPage() {
         </>
       )}
 
-      {me && me.inTop && (
+      {!data.suppressed && me && me.inTop && (
         <p className="lb-foot">You're in the top 20 — rank {me.rank} of {me.total}. 🎉</p>
       )}
 
-      {!me && (
+      {!data.suppressed && !me && (
         <p className="lb-foot">Take the quiz to get on the board.</p>
       )}
 
