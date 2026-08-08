@@ -65,6 +65,9 @@ export const api = {
   adminSetLearningResourceStatus: (id, status) =>
     request(`/admin/learning-resources/${id}/status`, { method: 'PATCH', body: { status } }),
   adminDeleteLearningResource: (id) => request(`/admin/learning-resources/${id}`, { method: 'DELETE' }),
+  // learning journey progress (PER-005)
+  getProgress: () => request('/progress'),
+  toggleProgress: (personaKey, stepIndex) => request('/progress/toggle', { method: 'POST', body: { personaKey, stepIndex } }),
   // CSV export needs the auth header, so it can't be a plain <a href> link
   // (the browser wouldn't attach the token) or a URL with the token in the
   // query string (tokens shouldn't sit in browser history/server logs).
