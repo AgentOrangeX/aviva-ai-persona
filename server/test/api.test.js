@@ -828,3 +828,32 @@ test('pathway reflects a real saved result and stays consistent with /api/recomm
     assert.equal(typeof item.reason, 'string');
   }
 });
+
+// ---- Business area / function taxonomy -----------------------------------
+
+test('registration accepts and stores businessFunction alongside businessArea', async () => {
+  const email = `taxonomy_${Date.now()}@test.local`;
+  const reg = await call('/api/auth/register', {
+    method: 'POST',
+    body: { email, password: 'password123', name: 'Taxonomy User', businessArea: 'CIO / Technology', businessFunction: 'Cloud' },
+  });
+  assert.equal(reg.status, 201);
+  assert.equal(reg.body.user.businessArea, 'CIO / Technology');
+  assert.equal(reg.body.user.businessFunction, 'Cloud');
+});
+
+test('profile update persists businessFunction and omitting it does not reset it', async () => {
+  const set = await call('/api/auth/profile', {
+    method: 'PATCH', token: userToken,
+    body: { businessArea: 'Data & AI', businessFunction: 'Data Science' },
+  });
+  assert.equal(set.status, 200);
+  assert.equal(set.body.user.businessFunction, 'Data Science');
+
+  const unrelated = await call('/api/auth/profile', { method: 'PATCH', token: userToken, body: { jobTitle: 'Data Lead' } });
+  assert.equal(unrelated.body.user.businessFunction, 'Data Science', 'omitting the field should leave it unchanged');
+
+  const confirm = await call('/api/auth/me', { token: userToken });
+  assert.equal(confirm.body.user.businessArea, 'Data & AI');
+  assert.equal(confirm.body.user.businessFunction, 'Data Science');
+});

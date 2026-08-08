@@ -9,7 +9,10 @@ import db from './db/index.js';
 import { QUESTIONS } from './lib/questions.js';
 import { scoreAnswers, DIM_KEYS } from './lib/scoring.js';
 
-const AREAS = ['Claims', 'Underwriting', 'Digital', 'Data & Analytics', 'Customer Ops', 'Finance', 'People'];
+const AREAS = [
+  'General Insurance (GI)', 'CIO / Technology', 'Data & AI', 'Customer & Marketing (C&M)',
+  'Finance', 'People / HR', 'Operations / COO',
+];
 const TITLES = ['Analyst', 'Manager', 'Lead', 'Specialist', 'Partner', 'Director'];
 const FIRST = ['Priya', 'Marcus', 'Aisha', 'Tom', 'Lena', 'Raj', 'Nadia', 'Owen', 'Sofia', 'Hassan', 'Grace', 'Ben', 'Mei', 'Kofi', 'Ivy'];
 const LAST = ['Shah', 'Doyle', 'Khan', 'Brook', 'Maes', 'Patel', 'Frost', 'Hale', 'Reyes', 'Ali', 'Webb', 'Cole', 'Lin', 'Owusu', 'Park'];

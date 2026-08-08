@@ -19,6 +19,7 @@ function publicUser(row) {
     name: row.name,
     jobTitle: row.job_title,
     businessArea: row.business_area,
+    businessFunction: row.business_function,
     role: row.role,
     shareAchievements: !!row.share_achievements,
     remindersEnabled: !!row.reminders_enabled,
@@ -43,7 +44,7 @@ function accountStats(userId) {
 
 // POST /api/auth/register
 router.post('/register', (req, res) => {
-  const { email, password, name, jobTitle, businessArea } = req.body || {};
+  const { email, password, name, jobTitle, businessArea, businessFunction } = req.body || {};
 
   if (!isEmail(email)) return res.status(400).json({ error: 'A valid email is required.' });
   if (!isStrongEnoughPassword(password)) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
@@ -56,15 +57,16 @@ router.post('/register', (req, res) => {
   const hash = bcrypt.hashSync(password, config.bcryptRounds);
   const info = db
     .prepare(
-      `INSERT INTO users (email, password_hash, name, job_title, business_area, role)
-       VALUES (?, ?, ?, ?, ?, 'user')`
+      `INSERT INTO users (email, password_hash, name, job_title, business_area, business_function, role)
+       VALUES (?, ?, ?, ?, ?, ?, 'user')`
     )
     .run(
       normEmail,
       hash,
       sanitiseString(name),
       sanitiseString(jobTitle),
-      sanitiseString(businessArea)
+      sanitiseString(businessArea),
+      sanitiseString(businessFunction)
     );
 
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
@@ -101,7 +103,7 @@ router.patch('/profile', requireAuth, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.sub);
   if (!row) return res.status(404).json({ error: 'User not found.' });
 
-  const { name, jobTitle, businessArea, email, shareAchievements, remindersEnabled, reminderFrequency } = req.body || {};
+  const { name, jobTitle, businessArea, businessFunction, email, shareAchievements, remindersEnabled, reminderFrequency } = req.body || {};
 
   if (name !== undefined && !isNonEmptyString(name)) {
     return res.status(400).json({ error: 'Your name cannot be empty.' });
@@ -126,13 +128,14 @@ router.patch('/profile', requireAuth, (req, res) => {
 
   db.prepare(
     `UPDATE users
-       SET name = ?, job_title = ?, business_area = ?, email = ?, share_achievements = ?,
+       SET name = ?, job_title = ?, business_area = ?, business_function = ?, email = ?, share_achievements = ?,
            reminders_enabled = ?, reminder_frequency = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(
     name !== undefined ? sanitiseString(name) : row.name,
     jobTitle !== undefined ? sanitiseString(jobTitle) : row.job_title,
     businessArea !== undefined ? sanitiseString(businessArea) : row.business_area,
+    businessFunction !== undefined ? sanitiseString(businessFunction) : row.business_function,
     nextEmail,
     shareAchievements !== undefined ? (shareAchievements ? 1 : 0) : row.share_achievements,
     remindersEnabled !== undefined ? (remindersEnabled ? 1 : 0) : row.reminders_enabled,

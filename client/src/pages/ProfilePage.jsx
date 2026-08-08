@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { useToast } from '../components/UI.jsx';
-
-const BUSINESS_AREAS = [
-  'Claims', 'Underwriting', 'Digital', 'Data & Analytics', 'Customer Operations',
-  'Finance', 'People / HR', 'Technology', 'Marketing', 'Risk & Compliance', 'Other',
-];
+import { BUSINESS_AREAS, functionsFor } from '../lib/taxonomy.js';
 
 const PERSONA_NAMES = {
   explorer: 'Explorer', optimiser: 'Optimiser', collaborator: 'Collaborator',
@@ -18,7 +14,7 @@ export default function ProfilePage() {
   const toast = useToast();
 
   const [form, setForm] = useState({
-    name: '', email: '', jobTitle: '', businessArea: '',
+    name: '', email: '', jobTitle: '', businessArea: '', businessFunction: '',
     shareAchievements: false, remindersEnabled: false, reminderFrequency: 'weekly',
   });
   const [stats, setStats] = useState(null);
@@ -29,14 +25,26 @@ export default function ProfilePage() {
   const [savingPw, setSavingPw] = useState(false);
   const [pwError, setPwError] = useState('');
 
+  const [legacyBusinessArea, setLegacyBusinessArea] = useState('');
+
   useEffect(() => {
     // Load fresh profile + stats from the server.
     api.me().then(({ user, stats }) => {
+      const storedArea = user.businessArea || '';
+      // The business area taxonomy changed to a two-level structure; a
+      // value saved under the old flat list (e.g. "Claims", which is now a
+      // Function, not a Business Area) won't match any option in the new
+      // dropdown. Rather than silently drop or guess-remap it, keep it out
+      // of the select (which would just show blank) and surface it as a
+      // one-off note so the person understands why nothing's selected.
+      const isKnownArea = !storedArea || BUSINESS_AREAS.includes(storedArea);
+      setLegacyBusinessArea(isKnownArea ? '' : storedArea);
       setForm({
         name: user.name || '',
         email: user.email || '',
         jobTitle: user.jobTitle || '',
-        businessArea: user.businessArea || '',
+        businessArea: isKnownArea ? storedArea : '',
+        businessFunction: user.businessFunction || '',
         shareAchievements: !!user.shareAchievements,
         remindersEnabled: !!user.remindersEnabled,
         reminderFrequency: user.reminderFrequency || 'weekly',
@@ -47,6 +55,10 @@ export default function ProfilePage() {
 
   const setField = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const setPwField = (k) => (e) => setPw({ ...pw, [k]: e.target.value });
+  const setBusinessArea = (e) => {
+    setLegacyBusinessArea('');
+    setForm({ ...form, businessArea: e.target.value, businessFunction: '' });
+  };
 
   async function saveProfile() {
     setProfileError('');
@@ -59,6 +71,7 @@ export default function ProfilePage() {
         email: form.email,
         jobTitle: form.jobTitle,
         businessArea: form.businessArea,
+        businessFunction: form.businessFunction,
         shareAchievements: form.shareAchievements,
         remindersEnabled: form.remindersEnabled,
         reminderFrequency: form.reminderFrequency,
@@ -129,11 +142,38 @@ export default function ProfilePage() {
         </div>
         <div className="field">
           <label htmlFor="businessArea">Business area</label>
-          <select id="businessArea" value={form.businessArea} onChange={setField('businessArea')}>
+          <select id="businessArea" value={form.businessArea} onChange={setBusinessArea}>
             <option value="">Select…</option>
             {BUSINESS_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+          {legacyBusinessArea && (
+            <span style={{ display: 'block', marginTop: 6, fontSize: '.8rem', color: 'var(--ink-soft)' }}>
+              Your previous selection ("{legacyBusinessArea}") is from an older list and isn't shown above —
+              please pick the closest match from the updated options.
+            </span>
+          )}
         </div>
+        {form.businessArea === 'Other' ? (
+          <div className="field">
+            <label htmlFor="businessFunction">Function</label>
+            <input
+              id="businessFunction"
+              value={form.businessFunction}
+              onChange={setField('businessFunction')}
+              placeholder="Your team or function"
+            />
+          </div>
+        ) : (
+          form.businessArea && (
+            <div className="field">
+              <label htmlFor="businessFunction">Function</label>
+              <select id="businessFunction" value={form.businessFunction} onChange={setField('businessFunction')}>
+                <option value="">Select…</option>
+                {functionsFor(form.businessArea).map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          )
+        )}
         <div className="field">
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontWeight: 500 }}>
             <input

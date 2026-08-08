@@ -2,14 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { api } from '../lib/api.js';
-
-const BUSINESS_AREAS = [
-  'Claims', 'Underwriting', 'Digital', 'Data & Analytics', 'Customer Operations',
-  'Finance', 'People / HR', 'Technology', 'Marketing', 'Risk & Compliance', 'Other',
-];
+import { BUSINESS_AREAS, functionsFor } from '../lib/taxonomy.js';
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', jobTitle: '', businessArea: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', jobTitle: '', businessArea: '', businessFunction: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const { register } = useAuth();
@@ -19,6 +15,7 @@ export default function RegisterPage() {
   const pendingAnswers = location.state?.pendingAnswers;
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const setBusinessArea = (e) => setForm({ ...form, businessArea: e.target.value, businessFunction: '' });
 
   async function submit() {
     setError('');
@@ -76,11 +73,32 @@ export default function RegisterPage() {
         </div>
         <div className="field">
           <label htmlFor="businessArea">Business area</label>
-          <select id="businessArea" value={form.businessArea} onChange={set('businessArea')}>
+          <select id="businessArea" value={form.businessArea} onChange={setBusinessArea}>
             <option value="">Select…</option>
             {BUSINESS_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
+        {form.businessArea === 'Other' ? (
+          <div className="field">
+            <label htmlFor="businessFunction">Function</label>
+            <input
+              id="businessFunction"
+              value={form.businessFunction}
+              onChange={set('businessFunction')}
+              placeholder="Your team or function"
+            />
+          </div>
+        ) : (
+          form.businessArea && (
+            <div className="field">
+              <label htmlFor="businessFunction">Function</label>
+              <select id="businessFunction" value={form.businessFunction} onChange={set('businessFunction')}>
+                <option value="">Select…</option>
+                {functionsFor(form.businessArea).map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          )
+        )}
         <button className="btn" style={{ width: '100%' }} onClick={submit} disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
         </button>
