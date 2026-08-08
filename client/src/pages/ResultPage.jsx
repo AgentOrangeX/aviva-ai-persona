@@ -19,16 +19,6 @@ const DIM_COLORS = {
   technical: '#0E4E8A', strategy: '#8A4FC4', change: '#E0AE00', customer: '#3FA431',
 };
 
-const ACHIEVEMENTS = {
-  finisher: { emoji: '🏁', name: 'Finisher', desc: 'Completed the assessment' },
-  rare: { emoji: '💎', name: 'Rare Find', desc: 'Unlocked a rare persona' },
-  balanced: { emoji: '⚖️', name: 'Well Rounded', desc: 'Strong across many dimensions' },
-  curious: { emoji: '🧭', name: 'Endlessly Curious', desc: 'Off-the-chart curiosity' },
-  customer: { emoji: '❤️', name: 'Customer Champion', desc: 'Customer focus leads the way' },
-  champion: { emoji: '⚡', name: 'Change Champion', desc: 'High potential to drive adoption' },
-};
-const ALL_ACH = Object.keys(ACHIEVEMENTS);
-
 export default function ResultPage() {
   const location = useLocation();
   const { user } = useAuth();
@@ -93,8 +83,8 @@ export default function ResultPage() {
 
   const p = result.persona;
   const c = COLORS[p.key] || COLORS.explorer;
-  const achievements = result.achievements || [];
   const journeyPct = p.journey.length ? Math.round((completedSteps.length / p.journey.length) * 100) : 0;
+  const achievementList = result.achievementProgress || [];
 
   return (
     <>
@@ -238,16 +228,23 @@ export default function ResultPage() {
         <div className="panel">
           <h3><span className="ic" style={{ background: '#E0AE00' }}>🏆</span> Achievements</h3>
           <div className="ach-grid">
-            {ALL_ACH.map((key) => {
-              const a = ACHIEVEMENTS[key];
-              const unlocked = achievements.includes(key);
-              return (
-                <div className={`ach ${unlocked ? '' : 'locked'}`} key={key}>
-                  <span className="em">{a.emoji}</span>
-                  <div><b>{a.name}</b><span>{unlocked ? a.desc : 'Locked'}</span></div>
+            {achievementList.map((a) => (
+              <div className={`ach ${a.unlocked ? '' : 'locked'}`} key={a.key}>
+                <span className="em">{a.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <b>{a.name}</b>
+                  <span>{a.criteria}</span>
+                  {!a.unlocked && (
+                    <div className="progress-wrap" style={{ marginTop: 6 }}>
+                      <div className="progress-track" style={{ height: 6 }}>
+                        <div className="progress-fill" style={{ width: `${a.progress}%`, background: 'var(--yellow-d)' }} />
+                      </div>
+                      <span className="progress-meta" style={{ fontSize: '.7rem' }}>{a.progress}% of the way there</span>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -265,13 +262,13 @@ export default function ResultPage() {
       </div>
 
       {showShare && (
-        <ShareModal result={result} onClose={() => setShowShare(false)} toast={toast} />
+        <ShareModal result={result} onClose={() => setShowShare(false)} toast={toast} shareAchievements={!!user?.shareAchievements} />
       )}
     </>
   );
 }
 
-function ShareModal({ result, onClose, toast }) {
+function ShareModal({ result, onClose, toast, shareAchievements }) {
   const p = result.persona;
   const c = COLORS[p.key] || COLORS.explorer;
   const cardRef = useRef(null);
@@ -377,6 +374,18 @@ function ShareModal({ result, onClose, toast }) {
 
     // Superpowers heading
     let y = result.rare ? 1030 : 980;
+
+    // Opt-in only (PER-007): a short, fixed-height line so it can never
+    // wrap and collide with the footer below — deliberately a count, not
+    // a per-badge emoji row, which would grow with how many are earned.
+    const unlockedCount = (result.achievementProgress || []).filter((a) => a.unlocked).length;
+    if (shareAchievements && unlockedCount > 0) {
+      ctx.fillStyle = c[1];
+      ctx.font = '800 32px Segoe UI, system-ui, sans-serif';
+      ctx.fillText(`🏆 ${unlockedCount} badge${unlockedCount === 1 ? '' : 's'} earned`, W / 2, y);
+      y += 56;
+    }
+
     ctx.fillStyle = '#10243A';
     ctx.font = '800 34px Segoe UI, system-ui, sans-serif';
     ctx.fillText('My AI superpowers', W / 2, y);
@@ -454,6 +463,11 @@ function ShareModal({ result, onClose, toast }) {
             <div className="sc-foot">Discover yours · {result.rare ? 'RARE FIND 💎' : 'aviva.ai/persona'}</div>
           </div>
         </div>
+        <p style={{ fontSize: '.78rem', color: 'var(--ink-soft)', textAlign: 'center', margin: '10px 0 0' }}>
+          {shareAchievements
+            ? '🏆 Your earned badge count will be included on this card.'
+            : <>Badges are not included — turn this on in <Link to="/profile" onClick={onClose}>your profile</Link> if you'd like to share them.</>}
+        </p>
         <div className="modal-actions">
           <button className="btn sm" onClick={download} disabled={busy}>{busy ? 'Creating…' : '⬇ Download image'}</button>
           {canShareFiles && <button className="btn sun sm" onClick={shareImage} disabled={busy}>📤 Share</button>}

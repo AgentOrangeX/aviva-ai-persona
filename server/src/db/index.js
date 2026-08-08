@@ -73,4 +73,16 @@ try {
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+// Lightweight migrations for columns added to a table that may already
+// exist in a deployed database (CREATE TABLE IF NOT EXISTS above is a
+// no-op once the table exists, so a new column in schema.sql never reaches
+// production on its own — it has to be added explicitly, once, here).
+function ensureColumn(table, column, definition) {
+  const existing = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!existing.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('users', 'share_achievements', "INTEGER NOT NULL DEFAULT 0");
+
 export default db;

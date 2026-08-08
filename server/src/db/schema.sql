@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
   job_title     TEXT,
   business_area TEXT,
   role          TEXT    NOT NULL DEFAULT 'user',  -- 'user' | 'admin'
+  -- Off by default (PER-007): a user must explicitly opt in before earned
+  -- achievement badges are drawn onto their shareable persona card.
+  share_achievements INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );

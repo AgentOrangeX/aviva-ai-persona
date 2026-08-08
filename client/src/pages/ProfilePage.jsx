@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const { user, applyProfileUpdate } = useAuth();
   const toast = useToast();
 
-  const [form, setForm] = useState({ name: '', email: '', jobTitle: '', businessArea: '' });
+  const [form, setForm] = useState({ name: '', email: '', jobTitle: '', businessArea: '', shareAchievements: false });
   const [stats, setStats] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
@@ -34,6 +34,7 @@ export default function ProfilePage() {
         email: user.email || '',
         jobTitle: user.jobTitle || '',
         businessArea: user.businessArea || '',
+        shareAchievements: !!user.shareAchievements,
       });
       setStats(stats);
     }).catch((e) => setProfileError(e.message));
@@ -53,6 +54,7 @@ export default function ProfilePage() {
         email: form.email,
         jobTitle: form.jobTitle,
         businessArea: form.businessArea,
+        shareAchievements: form.shareAchievements,
       });
       applyProfileUpdate(res);
       if (res.stats) setStats(res.stats);
@@ -124,6 +126,23 @@ export default function ProfilePage() {
             <option value="">Select…</option>
             {BUSINESS_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
+        </div>
+        <div className="field">
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontWeight: 500 }}>
+            <input
+              type="checkbox"
+              checked={form.shareAchievements}
+              onChange={(e) => setForm({ ...form, shareAchievements: e.target.checked })}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              Include my earned achievement badges when I share my persona card.
+              <br />
+              <span style={{ color: 'var(--ink-soft)', fontWeight: 400, fontSize: '.85rem' }}>
+                Off by default — your badges stay private unless you turn this on.
+              </span>
+            </span>
+          </label>
         </div>
         <button className="btn" onClick={saveProfile} disabled={savingProfile}>
           {savingProfile ? 'Saving…' : 'Save changes'}
