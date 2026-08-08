@@ -334,3 +334,21 @@ footer{text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:.8rem
 .abtn-danger-outline:hover:not(:disabled){background:#fef2f2;border-color:#fca5a5}
 
 .admin-actions{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px}
+
+/* ---------- Learning content filter pills ---------- */
+.lc-filter-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:14px 0 8px}
+.lc-filter-row{display:flex;flex-wrap:wrap;gap:8px}
+.lc-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);
+  background:#fff;color:var(--ink);font-size:.82rem;font-weight:600;
+  cursor:pointer;transition:background-color .12s,border-color .12s,color .12s;
+}
+.lc-pill:hover:not(:disabled){border-color:var(--blue)}
+.lc-pill:disabled{opacity:.4;cursor:not-allowed}
+.lc-pill-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:20px;padding:1px 6px;border-radius:999px;
+  background:rgba(23,111,193,.1);color:var(--blue);
+  font-size:.72rem;font-weight:800;
+}

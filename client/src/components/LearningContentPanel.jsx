@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
 import { AdminBtn } from './AdminBtn.jsx';
-import { Plus, Pencil, Send, Archive, Trash2, Check } from 'lucide-react';
+import { Plus, Pencil, Send, Archive, Trash2, Check, FileText, Video, Link2, GraduationCap } from 'lucide-react';
 
-const TYPE_LABELS = {
-  document: 'Document',
-  video: 'Video',
-  link: 'Link',
-  platform_url: 'Learning platform',
+const TYPE_META = {
+  document: { label: 'Document', icon: FileText },
+  video: { label: 'Video', icon: Video },
+  link: { label: 'Link', icon: Link2 },
+  platform_url: { label: 'Learning platform', icon: GraduationCap },
 };
+const TYPE_LABELS = Object.fromEntries(Object.entries(TYPE_META).map(([k, v]) => [k, v.label]));
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -17,6 +18,24 @@ const STATUS_LABELS = {
 };
 
 const EMPTY_FORM = { title: '', description: '', type: 'link', url: '', personaKeys: [] };
+
+function FilterPill({ active, disabled, onClick, children, count }) {
+  return (
+    <button
+      type="button"
+      className="lc-pill"
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      style={active ? { background: 'var(--blue)', color: '#fff', borderColor: 'var(--blue)' } : undefined}
+    >
+      {children}
+      <span className="lc-pill-count" style={active ? { background: 'rgba(255,255,255,.25)', color: '#fff' } : undefined}>
+        {count}
+      </span>
+    </button>
+  );
+}
 
 export default function LearningContentPanel() {
   const [resources, setResources] = useState(null);
@@ -27,6 +46,29 @@ export default function LearningContentPanel() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [personaFilter, setPersonaFilter] = useState(null);
+  const [typeFilter, setTypeFilter] = useState(null);
+
+  const personaCounts = useMemo(() => {
+    const counts = {};
+    for (const r of resources || []) {
+      for (const key of r.personas) counts[key] = (counts[key] || 0) + 1;
+    }
+    return counts;
+  }, [resources]);
+
+  const typeCounts = useMemo(() => {
+    const counts = {};
+    for (const r of resources || []) counts[r.type] = (counts[r.type] || 0) + 1;
+    return counts;
+  }, [resources]);
+
+  const filteredResources = useMemo(() => {
+    if (!resources) return null;
+    return resources.filter(
+      (r) => (!personaFilter || r.personas.includes(personaFilter)) && (!typeFilter || r.type === typeFilter)
+    );
+  }, [resources, personaFilter, typeFilter]);
 
   function loadResources() {
     api.adminLearningResources().then((r) => setResources(r.resources)).catch((e) => setError(e.message));
@@ -144,6 +186,50 @@ export default function LearningContentPanel() {
       {error && <div className="admin-flash" style={{ background: 'rgba(220,50,50,.1)', color: '#a02020', border: '1px solid rgba(220,50,50,.3)' }}>{error}</div>}
       {notice && <div className="admin-flash ok">{notice}</div>}
 
+      {resources && resources.length > 0 && (
+        <>
+          <div className="lc-filter-label">Filter by persona</div>
+          <div className="lc-filter-row">
+            <FilterPill active={!personaFilter} onClick={() => setPersonaFilter(null)} count={resources.length}>
+              All personas
+            </FilterPill>
+            {personas &&
+              Object.entries(personas).map(([key, p]) => (
+                <FilterPill
+                  key={key}
+                  active={personaFilter === key}
+                  disabled={!personaCounts[key]}
+                  onClick={() => setPersonaFilter(personaFilter === key ? null : key)}
+                  count={personaCounts[key] || 0}
+                >
+                  {p.emoji} {p.name}
+                </FilterPill>
+              ))}
+          </div>
+
+          <div className="lc-filter-label">Filter by type</div>
+          <div className="lc-filter-row" style={{ marginBottom: 16 }}>
+            <FilterPill active={!typeFilter} onClick={() => setTypeFilter(null)} count={resources.length}>
+              All types
+            </FilterPill>
+            {Object.entries(TYPE_META).map(([key, meta]) => {
+              const Icon = meta.icon;
+              return (
+                <FilterPill
+                  key={key}
+                  active={typeFilter === key}
+                  disabled={!typeCounts[key]}
+                  onClick={() => setTypeFilter(typeFilter === key ? null : key)}
+                  count={typeCounts[key] || 0}
+                >
+                  <Icon size={13} /> {meta.label}
+                </FilterPill>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {form && (
         <div className="modal-backdrop" onClick={() => !saving && setForm(null)}>
           <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -210,6 +296,17 @@ export default function LearningContentPanel() {
         <p style={{ color: 'var(--ink-soft)' }}>Loading resources…</p>
       ) : resources.length === 0 ? (
         <p style={{ color: 'var(--ink-soft)' }}>No learning resources yet — create one to get started.</p>
+      ) : filteredResources.length === 0 ? (
+        <p style={{ color: 'var(--ink-soft)' }}>
+          No resources match this filter.{' '}
+          <button
+            type="button"
+            onClick={() => { setPersonaFilter(null); setTypeFilter(null); }}
+            style={{ background: 'none', border: 'none', color: 'var(--blue)', font: 'inherit', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+          >
+            Clear filters
+          </button>
+        </p>
       ) : (
         <div className="utable-scroll">
           <table className="utable">
@@ -223,7 +320,7 @@ export default function LearningContentPanel() {
               </tr>
             </thead>
             <tbody>
-              {resources.map((r) => {
+              {filteredResources.map((r) => {
                 const next = nextStatusAction(r.status);
                 return (
                   <tr key={r.id}>
@@ -231,7 +328,10 @@ export default function LearningContentPanel() {
                       <b>{r.title}</b>
                       <span className="usub"><a href={r.url} target="_blank" rel="noopener noreferrer">{r.url}</a></span>
                     </td>
-                    <td>{TYPE_LABELS[r.type]}</td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {(() => { const Icon = TYPE_META[r.type].icon; return <Icon size={14} style={{ color: 'var(--ink-soft)' }} />; })()}
+                      {TYPE_LABELS[r.type]}
+                    </td>
                     <td>
                       {personas ? r.personas.map((k) => personas[k]?.emoji).join(' ') : r.personas.join(', ')}
                     </td>
