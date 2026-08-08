@@ -732,3 +732,99 @@ test('published resources for the matched persona appear in recommendations, dra
   assert.ok(titles.includes('Reco Published'));
   assert.ok(!titles.includes('Reco Draft'));
 });
+
+// ---- Regression: deterministic resource ordering ---------------------
+// publishedResourcesForPersona previously ordered by updated_at DESC with
+// no tiebreaker. SQLite's datetime('now') only has second-level
+// granularity, so resources published within the same second sorted in
+// undefined order — this surfaced as real test flakiness once enough
+// resources accumulated for one persona within a single test run.
+
+test('resources published in the same instant still sort deterministically', async () => {
+  const persona = 'pathfinder';
+  const created = [];
+  for (let i = 0; i < 3; i++) {
+    const r = await call('/api/admin/learning-resources', {
+      method: 'POST', token: adminToken,
+      body: { title: `Tie ${i}`, type: 'link', url: `https://example.com/tie-${i}`, personaKeys: [persona] },
+    });
+    await call(`/api/admin/learning-resources/${r.body.resource.id}/status`, { method: 'PATCH', token: adminToken, body: { status: 'published' } });
+    created.push(r.body.resource.id);
+  }
+
+  const first = await call('/api/admin/learning-resources', { token: adminToken });
+  const order1 = first.body.resources.filter((r) => created.includes(r.id)).map((r) => r.id);
+  const second = await call('/api/admin/learning-resources', { token: adminToken });
+  const order2 = second.body.resources.filter((r) => created.includes(r.id)).map((r) => r.id);
+
+  assert.deepEqual(order1, order2, 'the same query run twice must return the same order');
+  assert.deepEqual(order1, [...order1].sort((a, b) => b - a), 'ties should break by most-recently-created (highest id) first');
+});
+
+// ---- PER-010: AI capability progression pathways --------------------------
+
+test('pathway requires auth', async () => {
+  const r = await call('/api/pathway');
+  assert.equal(r.status, 401);
+});
+
+test('a user with no saved result gets the published framework with nothing achieved', async () => {
+  const email = `nopathway_${Date.now()}@test.local`;
+  const reg = await call('/api/auth/register', { method: 'POST', body: { email, password: 'password123', name: 'No Pathway User' } });
+  const freshToken = reg.body.token;
+
+  const r = await call('/api/pathway', { token: freshToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.hasResult, false);
+  assert.equal(r.body.currentLevel, 1);
+  assert.ok(r.body.levels.length === 5);
+  assert.ok(r.body.levels.every((l) => typeof l.minChamp === 'number' && typeof l.minJourneyPct === 'number'), 'every level must publish its numeric criteria');
+});
+
+test('current level requires BOTH champion score and journey completion thresholds, not either alone', async () => {
+  const { computePathwayStatus } = await import('../src/lib/pathway.js');
+
+  // high score, zero journey progress — should NOT reach a level that needs journey progress
+  const highScoreOnly = computePathwayStatus({ champScore: 100, journeyPct: 0 });
+  assert.equal(highScoreOnly.currentLevel, 1, 'a high score with no applied journey progress should not unlock level 2+');
+
+  // full journey, zero score — should also not unlock higher levels
+  const journeyOnly = computePathwayStatus({ champScore: 0, journeyPct: 100 });
+  assert.equal(journeyOnly.currentLevel, 1, 'full journey completion with no score should not unlock level 2+ on its own');
+
+  // both met
+  const both = computePathwayStatus({ champScore: 60, journeyPct: 60 });
+  assert.equal(both.currentLevel, 3);
+});
+
+test('next-level gaps are always non-negative and zero once a threshold is met', async () => {
+  const { computePathwayStatus } = await import('../src/lib/pathway.js');
+  const status = computePathwayStatus({ champScore: 55, journeyPct: 10 });
+  assert.equal(status.next.champGap, 0, 'champ threshold for level 3 (55) is already met, so the gap should be 0, not negative or omitted');
+  assert.ok(status.next.journeyPctGap > 0);
+});
+
+test('reaching the top level returns next: null, not an error', async () => {
+  const { computePathwayStatus } = await import('../src/lib/pathway.js');
+  const status = computePathwayStatus({ champScore: 100, journeyPct: 100 });
+  assert.equal(status.currentLevel, 5);
+  assert.equal(status.next, null);
+});
+
+test('pathway reflects a real saved result and stays consistent with /api/recommendations', async () => {
+  const saved = await call('/api/results', { method: 'POST', token: userToken, body: { answers: fullAnswers } });
+  const winnerKey = saved.body.result.persona.key;
+
+  const pathway = await call('/api/pathway', { token: userToken });
+  assert.equal(pathway.status, 200);
+  assert.equal(pathway.body.personaKey, winnerKey);
+  assert.equal(pathway.body.champScore, saved.body.result.champScore);
+  assert.equal(pathway.body.resultId, saved.body.resultId);
+  assert.ok(pathway.body.recommendations.length <= 3);
+
+  // every recommendation must be a real, valid item — not placeholder data
+  for (const item of pathway.body.recommendations) {
+    assert.ok(['journey_step', 'resource'].includes(item.type));
+    assert.equal(typeof item.reason, 'string');
+  }
+});

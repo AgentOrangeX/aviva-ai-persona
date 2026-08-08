@@ -18,6 +18,7 @@ import MyResultsPage from './pages/MyResultsPage.jsx';
 import ComparePage from './pages/ComparePage.jsx';
 import LeaderboardPage from './pages/LeaderboardPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import PathwayPage from './pages/PathwayPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
             <Route path="/compare" element={<ProtectedRoute><ComparePage /></ProtectedRoute>} />
             <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/pathway" element={<ProtectedRoute><PathwayPage /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
             <Route path="*" element={<div className="center-msg">Page not found.</div>} />
           </Routes>

@@ -13,7 +13,7 @@ router.use(requireAuth);
 // legitimate states the client renders distinct messaging for.
 router.get('/', (req, res) => {
   const latest = db
-    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .prepare('SELECT * FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(req.user.sub);
 
   if (!latest) {

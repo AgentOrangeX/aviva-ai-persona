@@ -52,6 +52,7 @@ export const api = {
   getResult: (id) => request(`/results/${id}`),
   getReminderStatus: () => request('/reminders/status'),
   getRecommendations: () => request('/recommendations'),
+  getPathway: () => request('/pathway'),
   leaderboard: () => request('/results/leaderboard'),
   // admin
   adminOverview: () => request('/admin/overview'),
