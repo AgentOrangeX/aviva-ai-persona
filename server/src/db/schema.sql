@@ -95,3 +95,19 @@ CREATE TABLE IF NOT EXISTS resource_personas (
 
 CREATE INDEX IF NOT EXISTS idx_learning_resources_status ON learning_resources(status);
 CREATE INDEX IF NOT EXISTS idx_resource_personas_persona ON resource_personas(persona_key);
+
+-- Per-user completion tracking for the built-in persona learning journeys
+-- (PER-005). Keyed by persona + step index rather than a foreign key into
+-- personas.js content, since that content is static code, not DB rows.
+-- Scoped per (user, persona) rather than per saved result, so completing a
+-- step sticks regardless of which attempt of that persona they're viewing.
+CREATE TABLE IF NOT EXISTS journey_progress (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  persona_key  TEXT    NOT NULL,
+  step_index   INTEGER NOT NULL,
+  completed_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, persona_key, step_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_journey_progress_user ON journey_progress(user_id, persona_key);

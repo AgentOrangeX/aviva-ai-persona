@@ -425,3 +425,61 @@ test('only published resources assigned to the matched persona appear in a resul
   assert.ok(!titles.includes('Still a draft'), 'draft resources should never appear to users');
   assert.ok(!titles.includes('Wrong persona'), "resources for a persona the user didn't match should not appear");
 });
+
+// ---- PER-005: learning journey progress tracking ------------------------
+
+test('anonymous cannot read or toggle progress', async () => {
+  const get = await call('/api/progress');
+  assert.equal(get.status, 401);
+  const toggle = await call('/api/progress/toggle', { method: 'POST', body: { personaKey: 'explorer', stepIndex: 0 } });
+  assert.equal(toggle.status, 401);
+});
+
+test('a fresh user has no progress recorded for a persona they have not touched', async () => {
+  const r = await call('/api/progress', { token: userToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.progress.explorer, undefined);
+});
+
+test('toggle validates persona key and step index bounds', async () => {
+  const badPersona = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'not-a-persona', stepIndex: 0 } });
+  assert.equal(badPersona.status, 400);
+
+  const negative = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: -1 } });
+  assert.equal(negative.status, 400);
+
+  const tooHigh = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 4 } }); // explorer has 4 steps: 0-3
+  assert.equal(tooHigh.status, 400);
+
+  const notInt = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 1.5 } });
+  assert.equal(notInt.status, 400);
+});
+
+test('toggling a step marks it complete, then undone, and persists in between', async () => {
+  const on = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 2 } });
+  assert.equal(on.status, 200);
+  assert.equal(on.body.completed, true);
+  assert.deepEqual(on.body.completedSteps, [2]);
+
+  // persists across a fresh read, not just in the toggle response
+  const mid = await call('/api/progress', { token: userToken });
+  assert.deepEqual(mid.body.progress.explorer, [2]);
+
+  const off = await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 2 } });
+  assert.equal(off.status, 200);
+  assert.equal(off.body.completed, false);
+  assert.deepEqual(off.body.completedSteps, []);
+
+  const after = await call('/api/progress', { token: userToken });
+  assert.equal(after.body.progress.explorer, undefined);
+});
+
+test('progress is isolated per user', async () => {
+  await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 0 } });
+
+  const adminView = await call('/api/progress', { token: adminToken });
+  assert.equal(adminView.body.progress.explorer, undefined, "one user's progress must not leak into another's");
+
+  // clean up so later tests in this file see a known state
+  await call('/api/progress/toggle', { method: 'POST', token: userToken, body: { personaKey: 'explorer', stepIndex: 0 } });
+});

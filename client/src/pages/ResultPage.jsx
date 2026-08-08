@@ -36,6 +36,8 @@ export default function ResultPage() {
   const [showShare, setShowShare] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(location.state?.saved || false);
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [togglingStep, setTogglingStep] = useState(null);
 
   const result = location.state?.result;
   const fromHistory = location.state?.fromHistory || false;
@@ -49,6 +51,34 @@ export default function ResultPage() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Progress is server-side per (user, persona), so it only exists for
+    // logged-in users — an anonymous preview has nothing to persist against.
+    if (!user || !result) return;
+    api
+      .getProgress()
+      .then((r) => setCompletedSteps(r.progress[result.persona.key] || []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, result?.persona.key]);
+
+  async function toggleStep(stepIndex) {
+    const wasCompleted = completedSteps.includes(stepIndex);
+    // Optimistic update — the acceptance criteria wants this to feel
+    // immediate, not wait on a round trip.
+    setCompletedSteps((prev) => (wasCompleted ? prev.filter((i) => i !== stepIndex) : [...prev, stepIndex]));
+    setTogglingStep(stepIndex);
+    try {
+      const r = await api.toggleProgress(result.persona.key, stepIndex);
+      setCompletedSteps(r.completedSteps);
+    } catch {
+      // revert on failure
+      setCompletedSteps((prev) => (wasCompleted ? [...prev, stepIndex] : prev.filter((i) => i !== stepIndex)));
+    } finally {
+      setTogglingStep(null);
+    }
+  }
 
   if (!result) {
     return (
@@ -64,6 +94,7 @@ export default function ResultPage() {
   const p = result.persona;
   const c = COLORS[p.key] || COLORS.explorer;
   const achievements = result.achievements || [];
+  const journeyPct = p.journey.length ? Math.round((completedSteps.length / p.journey.length) * 100) : 0;
 
   return (
     <>
@@ -111,31 +142,55 @@ export default function ResultPage() {
 
         <div className="panel journey">
           <h3><span className="ic" style={{ background: c[0] }}>↪</span> Your learning journey</h3>
+
+          {user && (
+            <div className="progress-wrap" style={{ marginBottom: 18 }}>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${journeyPct}%`, background: `linear-gradient(90deg, ${c[0]}, ${c[1]})` }} />
+              </div>
+              <span className="progress-meta">{completedSteps.length} / {p.journey.length} complete · {journeyPct}%</span>
+            </div>
+          )}
+
           <div className="steps">
-            {p.journey.map((step, i) => (
-              <div className="step" key={i}>
-                <span className="num" style={{ background: i % 2 ? c[1] : c[0] }}>{i + 1}</span>
-                <div className="body">
-                  <b>
+            {p.journey.map((step, i) => {
+              const isDone = completedSteps.includes(i);
+              return (
+                <div className="step" key={i} style={isDone ? { opacity: 0.7 } : undefined}>
+                  <span className="num" style={{ background: i % 2 ? c[1] : c[0] }}>{isDone ? '✓' : i + 1}</span>
+                  <div className="body">
+                    <b>
+                      {step.url ? (
+                        <a href={step.url} target="_blank" rel="noopener noreferrer" className="step-link">
+                          {step.title} <span className="step-ext" aria-hidden="true">↗</span>
+                        </a>
+                      ) : (
+                        step.title
+                      )}
+                    </b>
+                    <p>{step.detail}</p>
                     {step.url ? (
-                      <a href={step.url} target="_blank" rel="noopener noreferrer" className="step-link">
-                        {step.title} <span className="step-ext" aria-hidden="true">↗</span>
+                      <a href={step.url} target="_blank" rel="noopener noreferrer" className="meta meta-link">
+                        {step.meta} · Open resource ↗
                       </a>
                     ) : (
-                      step.title
+                      <span className="meta">{step.meta}</span>
                     )}
-                  </b>
-                  <p>{step.detail}</p>
-                  {step.url ? (
-                    <a href={step.url} target="_blank" rel="noopener noreferrer" className="meta meta-link">
-                      {step.meta} · Open resource ↗
-                    </a>
-                  ) : (
-                    <span className="meta">{step.meta}</span>
-                  )}
+                    {user && (
+                      <button
+                        type="button"
+                        className={isDone ? 'btn outline sm' : 'btn sm'}
+                        style={{ marginTop: 8 }}
+                        disabled={togglingStep === i}
+                        onClick={() => toggleStep(i)}
+                      >
+                        {togglingStep === i ? 'Saving…' : isDone ? '✓ Completed — mark undone' : 'Mark complete'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
