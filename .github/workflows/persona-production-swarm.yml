@@ -1,0 +1,47 @@
+name: Persona production swarm
+
+on:
+  workflow_dispatch:
+    inputs:
+      swarm_size:
+        description: Number of synthetic users
+        required: false
+        default: '30'
+      concurrency:
+        description: Parallel browser journeys
+        required: false
+        default: '5'
+
+jobs:
+  swarm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1 || true
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Run synthetic persona swarm
+        env:
+          PERSONA_BASE_URL: https://aviva-ai-persona-client-production.up.railway.app
+          SWARM_SIZE: ${{ inputs.swarm_size || '30' }}
+          SWARM_CONCURRENCY: ${{ inputs.concurrency || '5' }}
+          SWARM_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node tests/persona-production-swarm.mjs
+
+      - name: Upload swarm results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: persona-production-swarm-${{ github.run_id }}
+          path: artifacts/persona-swarm
+          if-no-files-found: warn
+          retention-days: 7
