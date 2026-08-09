@@ -1,6 +1,8 @@
 name: Persona production swarm
 
 on:
+  push:
+    branches: [agent/persona-swarm-30]
   workflow_dispatch:
     inputs:
       swarm_size:
